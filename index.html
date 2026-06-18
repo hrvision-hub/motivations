@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор мотивации</title>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>💰 Калькулятор мотивации</h1>
+
+    <div class="card">
+
+        <h2>Структура дохода</h2>
+
+        <div class="field-group">
+
+            <label>Оклад (₽)</label>
+
+            <input
+                type="number"
+                id="salary"
+                value="120000"
+                placeholder="Введите оклад">
+
+        </div>
+
+        <div id="kpiContainer">
+
+        </div>
+
+        <button
+            class="add-btn"
+            onclick="addKPI()">
+
+            + Добавить KPI
+
+        </button>
+
+        <div class="field-group premium-block">
+
+            <label>Премия (₽)</label>
+
+            <input
+                type="number"
+                id="premiumAmount"
+                value="0"
+                placeholder="Введите сумму премии">
+
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Подробный расчет премии</h2>
+
+        <input
+            type="hidden"
+            id="premiumLink"
+            value="https://lesookaya.github.io/-sales--/premium-calculator/">
+
+        <div id="linkPreview"></div>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Совокупный доход</h2>
+
+        <div
+            id="incomeBreakdown"
+            class="income-breakdown">
+
+        </div>
+
+        <div class="metric">
+
+            <div class="metric-title">
+
+                ИТОГО
+
+            </div>
+
+            <div
+                class="metric-value"
+                id="totalIncome">
+
+                0 ₽
+
+            </div>
+
+        </div>
+
+        <div class="footer">
+
+            <button
+                class="save-btn"
+                onclick="saveSettings()">
+
+                Сохранить
+
+            </button>
+
+            <button
+                class="reset-btn"
+                onclick="resetSettings()">
+
+                Сбросить
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+
+</html>
