@@ -1,5 +1,5 @@
 :root {
-  --bg: #ffffff;
+  --bg: #eeeeee;
   --panel: #ffffff;
   --text: #1f2933;
   --muted: #64748b;
@@ -10,7 +10,7 @@
   --accent-light: #e9fbf5;
   --blue-light: #edf7ff;
   --danger: #b42318;
-  --shadow: 0 18px 45px rgba(31, 41, 51, 0.07);
+  --shadow: 0 18px 45px rgba(31, 41, 51, 0.1);
 }
 
 * {
@@ -106,7 +106,7 @@ td select:focus {
 
 .table-block {
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   border-radius: 14px;
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -120,7 +120,7 @@ td select:focus {
   min-height: 68px;
   padding: 18px 20px;
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(90deg, #f2fff9, #f3faff);
+  background: linear-gradient(90deg, #e8fff5, #eaf7ff);
 }
 
 .title-actions {
@@ -217,7 +217,9 @@ tr:last-child td {
 .bonus-block,
 .income-scenarios-block,
 .calculation-block,
-.conversion-standards-block {
+.conversion-standards-block,
+.income-dynamics-block,
+.payback-block {
   margin-top: 24px;
 }
 
@@ -239,13 +241,20 @@ tr:last-child td {
   display: grid;
   grid-template-columns: minmax(120px, 0.9fr) minmax(160px, 1fr);
   align-items: center;
-  gap: 14px;
-  min-height: 74px;
-  padding: 14px 16px;
-  border: 2px solid #aee6d2;
-  border-radius: 18px;
-  background: linear-gradient(145deg, #ffffff, #f0fff8);
+  gap: 18px;
+  min-height: 92px;
+  padding: 18px 20px;
+  border: 2px solid #8ddfc2;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #ffffff, #dff9ec);
   font-weight: 700;
+}
+
+.income-card > span,
+.income-card-top span {
+  color: #174556;
+  font-size: 20px;
+  font-weight: 800;
 }
 
 .income-card-top {
@@ -261,7 +270,22 @@ tr:last-child td {
   border: 2px solid #b8dcff;
   border-radius: 14px;
   background: #fbfdff;
+  font-size: 20px;
   font-weight: 700;
+}
+
+.money-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.money-field > span {
+  color: var(--accent-dark);
+  font-size: 20px;
+  font-weight: 800;
 }
 
 .small-text-button {
@@ -288,6 +312,95 @@ tr:last-child td {
   color: #ffffff;
 }
 
+.income-path-section {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.income-path-toggle {
+  justify-self: center;
+  min-height: 54px;
+  min-width: 280px;
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #25a78a, #56c7dd);
+  box-shadow: 0 16px 32px rgba(37, 167, 138, 0.24);
+  cursor: pointer;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.income-path-card {
+  display: grid;
+  gap: 18px;
+  padding: 26px;
+  border: 2px solid #8bd8a4;
+  border-radius: 24px;
+  background: #d3f0d5;
+  box-shadow: var(--shadow);
+}
+
+.income-path-target {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  color: #174556;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.income-path-target .money-field {
+  width: min(260px, 100%);
+}
+
+.income-path-target input {
+  min-height: 52px;
+  border: 2px solid #76c7e8;
+  border-radius: 16px;
+  padding: 10px 14px;
+  font: inherit;
+  background: #f8fdff;
+}
+
+.income-path-result {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.income-path-step {
+  color: #164e45;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.income-path-arrow {
+  color: #2196a8;
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.income-path-total {
+  margin-top: 8px;
+  padding: 14px 20px;
+  border-radius: 18px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #25a78a, #46a6d8);
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.income-path-message {
+  color: #174556;
+  font-size: 20px;
+  font-weight: 800;
+}
+
 #incomeScenariosTable td:last-child {
   color: var(--accent-dark);
   font-size: 20px;
@@ -304,10 +417,12 @@ tr:last-child td {
 #incomeScenariosTable th {
   color: #174556;
   background: #dff3ff;
+  font-size: 18px;
 }
 
 #incomeScenariosTable td {
   background: #f7fcff;
+  font-size: 18px;
 }
 
 #incomeScenariosTable tr:nth-child(even) td {
@@ -373,6 +488,94 @@ tr:last-child td {
   background: #d9f9e7;
 }
 
+.analytics-content {
+  display: grid;
+  gap: 20px;
+  padding: 20px;
+}
+
+.chart-card {
+  min-height: 280px;
+  padding: 18px;
+  border: 2px solid #b7ddff;
+  border-radius: 18px;
+  background: #fbfdff;
+  box-shadow: inset 0 0 0 1px rgba(37, 167, 138, 0.08);
+}
+
+.chart-card canvas {
+  width: 100% !important;
+  max-height: 300px;
+}
+
+.fallback-chart {
+  display: grid;
+  gap: 12px;
+}
+
+.fallback-chart-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 110px;
+  gap: 10px;
+  align-items: center;
+}
+
+.fallback-chart-track {
+  min-height: 28px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eef2f7;
+}
+
+.fallback-chart-fill {
+  height: 100%;
+  min-width: 4px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #25a78a, #56c7dd);
+}
+
+.fallback-chart-fill.is-loss {
+  background: #ff7676;
+}
+
+.fallback-chart-fill.is-even {
+  background: #9ba3af;
+}
+
+.fallback-chart-fill.is-profit {
+  background: #53c68a;
+}
+
+#incomeDynamicsTable td:last-child {
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
+.payback-summary {
+  padding: 16px 18px;
+  border: 2px solid #bfe8d8;
+  border-radius: 16px;
+  color: #173f46;
+  background: #f5fffb;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.payback-summary.is-loss {
+  border-color: #ffb8b8;
+  background: #fff0f0;
+}
+
+.payback-summary.is-even {
+  border-color: #c9ced6;
+  background: #f5f6f8;
+}
+
+.payback-summary.is-profit {
+  border-color: #9be2bd;
+  background: #effdf5;
+}
+
 #conversionStandardsTable select {
   appearance: auto;
 }
@@ -408,6 +611,7 @@ tr:last-child td {
 
 .save-section {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 14px;
@@ -431,6 +635,11 @@ tr:last-child td {
   transform: translateY(-1px);
 }
 
+.export-button {
+  min-width: 240px;
+  background: linear-gradient(135deg, #46a6d8, #25a78a);
+}
+
 .save-status {
   min-width: 160px;
   color: var(--accent-dark);
@@ -450,12 +659,16 @@ tr:last-child td {
 #calculationTable th,
 #calculationTable td {
   min-width: 0;
-  padding: 9px 6px;
-  font-size: 13px;
+  padding: 10px 7px;
+  font-size: 15px;
   line-height: 1.25;
   border-right: 1px solid var(--soft-line);
   overflow-wrap: anywhere;
   word-break: normal;
+}
+
+#calculationTable th {
+  font-size: 13px;
 }
 
 #calculationTable th:last-child,
@@ -496,6 +709,25 @@ tr:last-child td {
 #calculationTable th:nth-child(9),
 #calculationTable td:nth-child(9) {
   width: 8%;
+}
+
+#calculationTable .plan-row td {
+  background: #fff7d1;
+  box-shadow: inset 0 1px 0 #e3c657, inset 0 -1px 0 #e3c657;
+}
+
+#calculationTable .plan-row td:first-child::before {
+  content: "100% план";
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin-bottom: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #785b00;
+  background: #ffe28a;
+  font-size: 11px;
+  font-weight: 900;
 }
 
 @media (max-width: 900px) {

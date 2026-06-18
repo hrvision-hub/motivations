@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Расчет премии</title>
+  <title>Калькулятор мотивации</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="page">
     <section class="page-header">
-      <h1>📝 Расчет премии</h1>
+      <h1>📝 Калькулятор мотивации</h1>
       <label class="sales-plan">
         <span>План продаж</span>
         <input id="salesPlan" class="money-input" type="text" inputmode="numeric" placeholder="Введите сумму">
@@ -46,7 +46,7 @@
               </tr>
               <tr>
                 <td>План состоявшихся сделок в месяц</td>
-                <td><input id="plannedDeals" type="number" min="0" step="1"></td>
+                <td><input id="plannedDeals" class="calculated-input" type="text" readonly></td>
               </tr>
             </tbody>
           </table>
@@ -160,27 +160,27 @@
         <div class="income-cards">
           <label class="income-card">
             <span>Оклад</span>
-            <input id="salaryInput" class="money-input" type="text" inputmode="numeric" placeholder="0">
+            <span class="money-field"><input id="salaryInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
           </label>
           <div class="income-card kpi-card" id="kpiCard">
             <div class="income-card-top">
               <span>KPI</span>
               <button class="small-text-button" type="button" id="hideKpi">убрать</button>
             </div>
-            <input id="kpiInput" class="money-input" type="text" inputmode="numeric" placeholder="0">
+            <span class="money-field"><input id="kpiInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
           </div>
           <button class="secondary-button restore-kpi-button" type="button" id="showKpi" hidden>Вернуть KPI</button>
           <label class="income-card">
             <span>Премия в норме</span>
-            <input id="normalPremiumInput" class="money-input" type="text" inputmode="numeric" placeholder="0">
+            <span class="money-field"><input id="normalPremiumInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
           </label>
           <label class="income-card">
             <span>Премия выше среднего</span>
-            <input id="strongPremiumInput" class="money-input" type="text" inputmode="numeric" placeholder="0">
+            <span class="money-field"><input id="strongPremiumInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
           </label>
           <label class="income-card">
             <span>Премия топового МОП</span>
-            <input id="topPremiumInput" class="money-input" type="text" inputmode="numeric" placeholder="0">
+            <span class="money-field"><input id="topPremiumInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
           </label>
         </div>
         <div class="table-wrap">
@@ -206,6 +206,20 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="income-path-section">
+      <button class="income-path-toggle" type="button" id="toggleIncomePath">🚀 Показать путь к доходу</button>
+      <div class="income-path-card is-hidden" id="incomePathCard">
+        <label class="income-path-target">
+          <span>Для дохода</span>
+          <span class="money-field"><input id="targetIncomeInput" class="money-input" type="text" inputmode="numeric" placeholder="350 000"><span>₽</span></span>
+          <span>нужно:</span>
+        </label>
+        <div class="income-path-result" id="incomePathResult">
+          Введите желаемый доход, чтобы увидеть путь по воронке.
         </div>
       </div>
     </section>
@@ -380,8 +394,26 @@
           </thead>
           <tbody>
             <tr data-status="normal">
-              <td><input type="text" value="Лид взят в работу"></td>
-              <td><input type="text" value="Лид ответил"></td>
+              <td>
+                <select class="standard-stage-from">
+                  <option selected>Лид взят в работу</option>
+                  <option>Лид ответил</option>
+                  <option>Лид квалифицирован</option>
+                  <option>Встреча назначена</option>
+                  <option>Встреча состоялась</option>
+                  <option>Состоявшихся сделок</option>
+                </select>
+              </td>
+              <td>
+                <select class="standard-stage-to">
+                  <option>Лид взят в работу</option>
+                  <option selected>Лид ответил</option>
+                  <option>Лид квалифицирован</option>
+                  <option>Встреча назначена</option>
+                  <option>Встреча состоялась</option>
+                  <option>Состоявшихся сделок</option>
+                </select>
+              </td>
               <td class="percent-cell"><input class="standard-percent" type="number" min="0" max="100" step="0.1" value="70"></td>
               <td>
                 <div class="status-actions">
@@ -396,8 +428,26 @@
               </td>
             </tr>
             <tr data-status="good">
-              <td><input type="text" value="Лид ответил"></td>
-              <td><input type="text" value="Лид квалифицирован"></td>
+              <td>
+                <select class="standard-stage-from">
+                  <option>Лид взят в работу</option>
+                  <option selected>Лид ответил</option>
+                  <option>Лид квалифицирован</option>
+                  <option>Встреча назначена</option>
+                  <option>Встреча состоялась</option>
+                  <option>Состоявшихся сделок</option>
+                </select>
+              </td>
+              <td>
+                <select class="standard-stage-to">
+                  <option>Лид взят в работу</option>
+                  <option>Лид ответил</option>
+                  <option selected>Лид квалифицирован</option>
+                  <option>Встреча назначена</option>
+                  <option>Встреча состоялась</option>
+                  <option>Состоявшихся сделок</option>
+                </select>
+              </td>
               <td class="percent-cell"><input class="standard-percent" type="number" min="0" max="100" step="0.1" value="30"></td>
               <td>
                 <div class="status-actions">
@@ -412,8 +462,26 @@
               </td>
             </tr>
             <tr data-status="excellent">
-              <td><input type="text" value="Лид квалифицирован"></td>
-              <td><input type="text" value="Встреча назначена"></td>
+              <td>
+                <select class="standard-stage-from">
+                  <option>Лид взят в работу</option>
+                  <option>Лид ответил</option>
+                  <option selected>Лид квалифицирован</option>
+                  <option>Встреча назначена</option>
+                  <option>Встреча состоялась</option>
+                  <option>Состоявшихся сделок</option>
+                </select>
+              </td>
+              <td>
+                <select class="standard-stage-to">
+                  <option>Лид взят в работу</option>
+                  <option>Лид ответил</option>
+                  <option>Лид квалифицирован</option>
+                  <option selected>Встреча назначена</option>
+                  <option>Встреча состоялась</option>
+                  <option>Состоявшихся сделок</option>
+                </select>
+              </td>
               <td class="percent-cell"><input class="standard-percent" type="number" min="0" max="100" step="0.1" value="50"></td>
               <td>
                 <div class="status-actions">
@@ -428,8 +496,26 @@
               </td>
             </tr>
             <tr data-status="normal">
-              <td><input type="text" value="Встреча назначена"></td>
-              <td><input type="text" value="Встреча состоялась"></td>
+              <td>
+                <select class="standard-stage-from">
+                  <option>Лид взят в работу</option>
+                  <option>Лид ответил</option>
+                  <option>Лид квалифицирован</option>
+                  <option selected>Встреча назначена</option>
+                  <option>Встреча состоялась</option>
+                  <option>Состоявшихся сделок</option>
+                </select>
+              </td>
+              <td>
+                <select class="standard-stage-to">
+                  <option>Лид взят в работу</option>
+                  <option>Лид ответил</option>
+                  <option>Лид квалифицирован</option>
+                  <option>Встреча назначена</option>
+                  <option selected>Встреча состоялась</option>
+                  <option>Состоявшихся сделок</option>
+                </select>
+              </td>
               <td class="percent-cell"><input class="standard-percent" type="number" min="0" max="100" step="0.1" value="70"></td>
               <td>
                 <div class="status-actions">
@@ -448,12 +534,72 @@
       </div>
     </section>
 
+    <section class="table-block income-dynamics-block">
+      <div class="table-title-row">
+        <h2>📈 Динамика дохода из месяца в месяц</h2>
+      </div>
+      <div class="analytics-content">
+        <div class="table-wrap">
+          <table id="incomeDynamicsTable">
+            <thead>
+              <tr>
+                <th>Название месяца</th>
+                <th>Количество сделок</th>
+                <th>Совокупный доход</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input class="month-name" type="text" value="1 месяц"></td>
+                <td><input class="month-deals" type="number" min="0" step="1" value="0"></td>
+                <td class="month-income">0 ₽</td>
+              </tr>
+              <tr>
+                <td><input class="month-name" type="text" value="2 месяц"></td>
+                <td><input class="month-deals" type="number" min="0" step="1" value="0"></td>
+                <td class="month-income">0 ₽</td>
+              </tr>
+              <tr>
+                <td><input class="month-name" type="text" value="3 месяц"></td>
+                <td><input class="month-deals" type="number" min="0" step="1" value="0"></td>
+                <td class="month-income">0 ₽</td>
+              </tr>
+              <tr>
+                <td><input class="month-name" type="text" value="4 месяц"></td>
+                <td><input class="month-deals" type="number" min="0" step="1" value="0"></td>
+                <td class="month-income">0 ₽</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-card">
+          <canvas id="incomeDynamicsChart" height="120"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="table-block payback-block">
+      <div class="table-title-row">
+        <h2>⚖️ Окупаемость кандидата</h2>
+        <button class="secondary-button" type="button" id="togglePaybackChart">Скрыть график</button>
+      </div>
+      <div class="analytics-content" id="paybackChartWrap">
+        <div class="payback-summary" id="paybackSummary">Кандидат пока не окупается</div>
+        <div class="chart-card">
+          <canvas id="paybackChart" height="120"></canvas>
+        </div>
+      </div>
+    </section>
+
     <section class="save-section">
+      <button class="save-button export-button" type="button" id="exportExcel">📥 Скачать расчет в Excel</button>
       <button class="save-button" type="button" id="saveData">Сохранить</button>
       <span class="save-status" id="saveStatus" aria-live="polite"></span>
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
