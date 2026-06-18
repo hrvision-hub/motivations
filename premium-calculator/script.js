@@ -242,51 +242,78 @@ function getCalculationMetricsFromTable() {
   })).filter((item) => item.deals >= 0);
 }
 
-function getExtendedIncomePath(targetIncome) {
-  const salary = toNumber(salaryInput.value);
-  const kpi = getKpiValue();
-  const context = getCalculationContext();
-  const existingRows = getCalculationMetricsFromTable()
-    .map((item) => ({ ...item, income: salary + kpi + item.premium }))
-    .sort((a, b) => a.income - b.income || a.deals - b.deals);
-  const existingMatch = existingRows.find((item) => item.income >= targetIncome);
+function getExactPremiumMatch(requiredPremium, fixedIncome) {
+  return getCalculationMetricsFromTable()
+    .map((item) => ({ ...item, income: fixedIncome + item.premium }))
+    .find((item) => Math.abs(item.premium - requiredPremium) < 1);
+}
 
-  if (existingMatch) {
-    return existingMatch;
-  }
+function getReverseMetricsForPremium(requiredPremium, fixedIncome, context) {
+  const positivePercents = getBonusRanges()
+    .map((range) => range.percent)
+    .filter((percent) => percent > 0);
 
-  const conversionProduct = context.answeredConversion
-    * context.qualifiedConversion
-    * context.meetingSetConversion
-    * context.meetingDoneConversion
-    * context.dealsConversion;
-
-  if (conversionProduct <= 0 || context.averageCheck <= 0 || context.salesPlan <= 0) {
+  if (!positivePercents.length || context.averageCheck <= 0 || context.salesPlan <= 0) {
     return null;
   }
 
-  const lastLeads = existingRows.reduce((max, item) => Math.max(max, Math.ceil(item.leads)), 0);
-  const plannedDeals = Math.max(1, toNumber(plannedDealsInput.value));
-  const estimatedPlanLeads = Math.ceil(plannedDeals / conversionProduct);
-  const maxLeads = Math.min(150000, Math.max(lastLeads + 1000, estimatedPlanLeads * 8 + 1000));
+  const minPercent = Math.min(...positivePercents);
+  const maxRevenue = requiredPremium / (minPercent / 100);
+  const maxDeals = Math.min(500000, Math.ceil(maxRevenue / context.averageCheck) + 1000);
 
-  for (let leads = Math.max(1, lastLeads + 1); leads <= maxLeads; leads += 1) {
-    const metrics = calculateCalculationMetrics(leads, context);
-    const income = salary + kpi + metrics.premium;
+  for (let deals = 0; deals <= maxDeals; deals += 1) {
+    const sales = deals * context.averageCheck;
+    const planPercent = (sales / context.salesPlan) * 100;
+    const managerPercent = getManagerPercent(planPercent);
+    const premium = sales * (managerPercent / 100);
 
-    if (income >= targetIncome) {
+    if (premium >= requiredPremium) {
+      const meetingDone = context.dealsConversion > 0 ? deals / context.dealsConversion : 0;
+      const meetingSet = context.meetingDoneConversion > 0 ? meetingDone / context.meetingDoneConversion : 0;
+      const qualified = context.meetingSetConversion > 0 ? meetingSet / context.meetingSetConversion : 0;
+      const answered = context.qualifiedConversion > 0 ? qualified / context.qualifiedConversion : 0;
+      const leads = context.answeredConversion > 0 ? answered / context.answeredConversion : 0;
+
       return {
-        leads: metrics.leads,
-        meetingDone: metrics.meetingDone,
-        deals: metrics.deals,
-        sales: metrics.sales,
-        premium: metrics.premium,
-        income,
+        leads,
+        meetingDone,
+        deals,
+        sales,
+        premium,
+        income: fixedIncome + premium,
       };
     }
   }
 
   return null;
+}
+
+function getExtendedIncomePath(targetIncome) {
+  const salary = toNumber(salaryInput.value);
+  const kpi = getKpiValue();
+  const fixedIncome = salary + kpi;
+  const context = getCalculationContext();
+
+  if (targetIncome <= fixedIncome) {
+    return {
+      coveredByFixed: true,
+      leads: 0,
+      meetingDone: 0,
+      deals: 0,
+      sales: 0,
+      premium: 0,
+      income: fixedIncome,
+    };
+  }
+
+  const requiredPremium = targetIncome - fixedIncome;
+  const exactMatch = getExactPremiumMatch(requiredPremium, fixedIncome);
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  return getReverseMetricsForPremium(requiredPremium, fixedIncome, context);
 }
 
 function updateIncomePath() {
@@ -304,15 +331,24 @@ function updateIncomePath() {
     return;
   }
 
+  const fixedMessage = path.coveredByFixed
+    ? '<div class="income-path-message">Этот доход уже покрывается фиксированной частью</div>'
+    : '';
+  const workDays = Number(workDaysInput.value) || 0;
+  const leadsPerDay = workDays > 0 ? path.leads / workDays : path.leads;
+
   incomePathResult.innerHTML = `
-    <div class="income-path-step">${formatDecimal(path.leads)} лидов в месяц</div>
+    ${fixedMessage}
+    <div class="income-path-step">${formatDecimal(leadsPerDay)} лидов в день</div>
     <div class="income-path-arrow">↓</div>
     <div class="income-path-step">${formatDecimal(path.meetingDone)} встреч в месяц</div>
     <div class="income-path-arrow">↓</div>
     <div class="income-path-step">${formatNumber(path.deals)} сделок в месяц</div>
     <div class="income-path-arrow">↓</div>
     <div class="income-path-step">${formatCurrency(path.sales)} выручки</div>
-    <div class="income-path-arrow">=</div>
+    <div class="income-path-arrow">↓</div>
+    <div class="income-path-step">${formatCurrency(path.premium)} премии</div>
+    <div class="income-path-arrow">↓</div>
     <div class="income-path-total">${formatCurrency(path.income)} совокупный доход</div>
   `;
 }
@@ -458,10 +494,12 @@ function createConversionStandardRow(from = "", to = "", percent = "", status = 
 function getCalculationContext() {
   const averageCheck = toNumber(averageCheckInput.value);
   const salesPlan = toNumber(salesPlanInput.value);
+  const workDays = Number(workDaysInput.value) || 0;
 
   return {
     averageCheck,
     salesPlan,
+    workDays,
     answeredConversion: getFunnelConversion(1),
     qualifiedConversion: getFunnelConversion(2),
     meetingSetConversion: getFunnelConversion(3),
