@@ -248,44 +248,106 @@ function getExactPremiumMatch(requiredPremium, fixedIncome) {
     .find((item) => Math.abs(item.premium - requiredPremium) < 1);
 }
 
-function getReverseMetricsForPremium(requiredPremium, fixedIncome, context) {
-  const positivePercents = getBonusRanges()
-    .map((range) => range.percent)
-    .filter((percent) => percent > 0);
+function interpolateValue(from, to, ratio) {
+  return from + (to - from) * ratio;
+}
 
-  if (!positivePercents.length || context.averageCheck <= 0 || context.salesPlan <= 0) {
-    return null;
+function getPremiumPathFromTable(requiredPremium, fixedIncome) {
+  const rows = getCalculationMetricsFromTable()
+    .filter((item) => item.premium >= 0)
+    .sort((a, b) => a.premium - b.premium);
+
+  const exactMatch = rows.find((item) => Math.abs(item.premium - requiredPremium) < 1);
+
+  if (exactMatch) {
+    return {
+      ...exactMatch,
+      premium: requiredPremium,
+      income: fixedIncome + requiredPremium,
+    };
   }
 
-  const minPercent = Math.min(...positivePercents);
-  const maxRevenue = requiredPremium / (minPercent / 100);
-  const maxDeals = Math.min(500000, Math.ceil(maxRevenue / context.averageCheck) + 1000);
+  for (let index = 1; index < rows.length; index += 1) {
+    const previous = rows[index - 1];
+    const current = rows[index];
 
-  for (let deals = 0; deals <= maxDeals; deals += 1) {
-    const sales = deals * context.averageCheck;
-    const planPercent = (sales / context.salesPlan) * 100;
-    const managerPercent = getManagerPercent(planPercent);
-    const premium = sales * (managerPercent / 100);
-
-    if (premium >= requiredPremium) {
-      const meetingDone = context.dealsConversion > 0 ? deals / context.dealsConversion : 0;
-      const meetingSet = context.meetingDoneConversion > 0 ? meetingDone / context.meetingDoneConversion : 0;
-      const qualified = context.meetingSetConversion > 0 ? meetingSet / context.meetingSetConversion : 0;
-      const answered = context.qualifiedConversion > 0 ? qualified / context.qualifiedConversion : 0;
-      const leads = context.answeredConversion > 0 ? answered / context.answeredConversion : 0;
+    if (previous.premium <= requiredPremium && current.premium >= requiredPremium && current.premium !== previous.premium) {
+      const ratio = (requiredPremium - previous.premium) / (current.premium - previous.premium);
 
       return {
-        leads,
-        meetingDone,
-        deals,
-        sales,
-        premium,
-        income: fixedIncome + premium,
+        leads: interpolateValue(previous.leads, current.leads, ratio),
+        meetingDone: interpolateValue(previous.meetingDone, current.meetingDone, ratio),
+        deals: interpolateValue(previous.deals, current.deals, ratio),
+        sales: interpolateValue(previous.sales, current.sales, ratio),
+        premium: requiredPremium,
+        income: fixedIncome + requiredPremium,
       };
     }
   }
 
   return null;
+}
+
+function getRevenueForRequiredPremium(requiredPremium, context) {
+  const ranges = getBonusRanges()
+    .filter((range) => range.percent > 0)
+    .sort((a, b) => a.from - b.from);
+
+  if (!ranges.length || context.salesPlan <= 0) {
+    return null;
+  }
+
+  const exactRange = ranges.find((range) => {
+    const revenue = requiredPremium / (range.percent / 100);
+    const planPercent = (revenue / context.salesPlan) * 100;
+
+    return planPercent >= range.from && planPercent <= range.to;
+  });
+
+  if (exactRange) {
+    return requiredPremium / (exactRange.percent / 100);
+  }
+
+  const nearestRange = ranges
+    .map((range) => {
+      const revenue = requiredPremium / (range.percent / 100);
+      const planPercent = (revenue / context.salesPlan) * 100;
+      const distance = planPercent < range.from
+        ? range.from - planPercent
+        : planPercent - range.to;
+
+      return {
+        revenue,
+        distance,
+      };
+    })
+    .sort((a, b) => a.distance - b.distance)[0];
+
+  return nearestRange?.revenue || null;
+}
+
+function getReverseMetricsForPremium(requiredPremium, fixedIncome, context) {
+  const sales = getRevenueForRequiredPremium(requiredPremium, context);
+
+  if (!sales || context.averageCheck <= 0) {
+    return null;
+  }
+
+  const deals = sales / context.averageCheck;
+  const meetingDone = context.dealsConversion > 0 ? deals / context.dealsConversion : 0;
+  const meetingSet = context.meetingDoneConversion > 0 ? meetingDone / context.meetingDoneConversion : 0;
+  const qualified = context.meetingSetConversion > 0 ? meetingSet / context.meetingSetConversion : 0;
+  const answered = context.qualifiedConversion > 0 ? qualified / context.qualifiedConversion : 0;
+  const leads = context.answeredConversion > 0 ? answered / context.answeredConversion : 0;
+
+  return {
+    leads,
+    meetingDone,
+    deals,
+    sales,
+    premium: requiredPremium,
+    income: fixedIncome + requiredPremium,
+  };
 }
 
 function getExtendedIncomePath(targetIncome) {
@@ -307,10 +369,10 @@ function getExtendedIncomePath(targetIncome) {
   }
 
   const requiredPremium = targetIncome - fixedIncome;
-  const exactMatch = getExactPremiumMatch(requiredPremium, fixedIncome);
+  const tablePath = getPremiumPathFromTable(requiredPremium, fixedIncome);
 
-  if (exactMatch) {
-    return exactMatch;
+  if (tablePath) {
+    return tablePath;
   }
 
   return getReverseMetricsForPremium(requiredPremium, fixedIncome, context);
@@ -343,7 +405,7 @@ function updateIncomePath() {
     <div class="income-path-arrow">↓</div>
     <div class="income-path-step">${formatDecimal(path.meetingDone)} встреч в месяц</div>
     <div class="income-path-arrow">↓</div>
-    <div class="income-path-step">${formatNumber(path.deals)} сделок в месяц</div>
+    <div class="income-path-step">${formatDecimal(path.deals)} сделок в месяц</div>
     <div class="income-path-arrow">↓</div>
     <div class="income-path-step">${formatCurrency(path.sales)} выручки</div>
     <div class="income-path-arrow">↓</div>
