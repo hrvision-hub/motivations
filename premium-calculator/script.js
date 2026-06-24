@@ -6,6 +6,16 @@ const monthlyMeetingsInput = document.querySelector("#monthlyMeetings");
 const averageCheckInput = document.querySelector("#averageCheck");
 const plannedDealsInput = document.querySelector("#plannedDeals");
 const salaryInput = document.querySelector("#salaryInput");
+const probationSalaryInput = document.querySelector("#probationSalaryInput");
+const probationSalaryLabelInput = document.querySelector("#probationSalaryLabel");
+const probationSalaryCard = document.querySelector("#probationSalaryCard");
+const hideProbationSalaryButton = document.querySelector("#hideProbationSalary");
+const showProbationSalaryButton = document.querySelector("#showProbationSalary");
+const probationAverageCard = document.querySelector("#probationAverageCard");
+const probationAverageLabelInput = document.querySelector("#probationAverageLabel");
+const probationAverageIncome = document.querySelector("#probationAverageIncome");
+const hideProbationAverageButton = document.querySelector("#hideProbationAverage");
+const showProbationAverageButton = document.querySelector("#showProbationAverage");
 const kpiInput = document.querySelector("#kpiInput");
 const normalPremiumInput = document.querySelector("#normalPremiumInput");
 const strongPremiumInput = document.querySelector("#strongPremiumInput");
@@ -26,8 +36,10 @@ const bonusTable = document.querySelector("#bonusTable");
 const calculationTable = document.querySelector("#calculationTable");
 const conversionStandardsTable = document.querySelector("#conversionStandardsTable");
 const incomeDynamicsTable = document.querySelector("#incomeDynamicsTable");
+const incomeDynamicsContent = document.querySelector("#incomeDynamicsContent");
 const calculationTableWrap = calculationTable.closest(".table-wrap");
 const conversionStandardsWrap = conversionStandardsTable.closest(".table-wrap");
+const paybackBlock = document.querySelector("#paybackBlock");
 const paybackChartWrap = document.querySelector("#paybackChartWrap");
 const paybackSummary = document.querySelector("#paybackSummary");
 const exportExcelButton = document.querySelector("#exportExcel");
@@ -38,6 +50,7 @@ const addConversionStandardRowButton = document.querySelector("#addConversionSta
 const toggleIncomeScenariosButton = document.querySelector("#toggleIncomeScenarios");
 const toggleCalculationTableButton = document.querySelector("#toggleCalculationTable");
 const toggleConversionStandardsButton = document.querySelector("#toggleConversionStandards");
+const toggleIncomeDynamicsButton = document.querySelector("#toggleIncomeDynamics");
 const togglePaybackChartButton = document.querySelector("#togglePaybackChart");
 const saveDataButton = document.querySelector("#saveData");
 const saveStatus = document.querySelector("#saveStatus");
@@ -53,6 +66,57 @@ const STAGE_OPTIONS = [
 let incomeDynamicsChart;
 let paybackChart;
 let xlsxLoadingPromise;
+const currencyLabelsPlugin = {
+  id: "currencyLabels",
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+
+    ctx.save();
+    ctx.font = "700 12px Inter, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+
+      if (meta.hidden) {
+        return;
+      }
+
+      meta.data.forEach((element, index) => {
+        const value = dataset.data[index];
+
+        if (!Number.isFinite(value)) {
+          return;
+        }
+
+        const position = element.tooltipPosition();
+        const isBar = dataset.type === "bar";
+        const isNegative = value < 0;
+        const label = dataset.label || "";
+        const color = label === "Совокупный доход"
+          ? "#134e4a"
+          : label.includes("Выручка")
+          ? "#14532d"
+          : label.includes("доход")
+            ? "#1e3a8a"
+            : (isNegative ? "#991b1b" : "#065f46");
+        const offset = label === "Совокупный доход"
+          ? -14
+          : label.includes("Выручка")
+          ? -24
+          : label.includes("доход")
+            ? 18
+            : (isBar && isNegative ? 22 : -8);
+
+        ctx.fillStyle = color;
+        ctx.fillText(formatCurrency(value), position.x, position.y + offset);
+      });
+    });
+
+    ctx.restore();
+  },
+};
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -135,6 +199,28 @@ function parsePercent(value) {
   return toNumber(value);
 }
 
+function getFunnelStages() {
+  return Array.from(funnelTable.querySelectorAll("tbody tr")).map((row, index) => {
+    const input = row.querySelector("td:first-child input");
+    const name = input?.value.trim() || `Стадия ${index + 1}`;
+
+    return {
+      name,
+      conversion: index === 0 ? 1 : getFunnelConversion(index),
+    };
+  });
+}
+
+function getDealStageIndex(stages = getFunnelStages()) {
+  return Math.max(0, stages.length - 1);
+}
+
+function getMeetingStageIndex(stages = getFunnelStages()) {
+  const index = stages.findIndex((stage) => stage.name.toLowerCase().includes("встреч") && stage.name.toLowerCase().includes("состоя"));
+
+  return index >= 0 ? index : Math.max(0, stages.length - 2);
+}
+
 function getFunnelConversionPercent(index) {
   const conversionCells = Array.from(funnelTable.querySelectorAll(".conversion"));
 
@@ -166,6 +252,20 @@ function getManagerPercent(planPercent) {
 function updateFunnelConversions() {
   const rows = Array.from(funnelTable.querySelectorAll("tbody tr"));
 
+  rows.forEach((row) => {
+    const actionCell = row.querySelector("td:last-child");
+
+    if (actionCell && !actionCell.querySelector(".move-row-up")) {
+      actionCell.innerHTML = `
+        <div class="row-actions">
+          <button class="icon-button move-row-up" type="button" aria-label="Переместить вверх">↑</button>
+          <button class="icon-button move-row-down" type="button" aria-label="Переместить вниз">↓</button>
+          <button class="icon-button remove-row" type="button" aria-label="Удалить строку">x</button>
+        </div>
+      `;
+    }
+  });
+
   rows.forEach((row, index) => {
     const conversionCell = row.querySelector(".conversion");
     const currentValue = Number(row.querySelector(".funnel-value").value);
@@ -182,7 +282,7 @@ function updateFunnelConversions() {
   });
 }
 
-function calculateThroughFunnel(startValue, lastConversionIndex) {
+function calculateThroughFunnel(startValue, lastConversionIndex = getMeetingStageIndex()) {
   let result = Math.round(startValue);
 
   for (let index = 1; index <= lastConversionIndex; index += 1) {
@@ -198,7 +298,7 @@ function updateNorms() {
   const salesPlan = toNumber(salesPlanInput.value);
   const averageCheck = toNumber(averageCheckInput.value);
   const processedRequests = Math.round(workDays * newRequestsPerDay);
-  const monthlyMeetings = calculateThroughFunnel(processedRequests, 4);
+  const monthlyMeetings = calculateThroughFunnel(processedRequests);
   const plannedDeals = averageCheck > 0 ? roundHalfDown(salesPlan / averageCheck) : 0;
 
   processedRequestsInput.value = formatNumber(processedRequests);
@@ -210,33 +310,56 @@ function getKpiValue() {
   return kpiCard.hidden ? 0 : toNumber(kpiInput.value);
 }
 
+function getProbationSalaryValue() {
+  return probationSalaryCard.hidden ? 0 : toNumber(probationSalaryInput.value);
+}
+
 function updateIncomeScenarios() {
   const salary = toNumber(salaryInput.value);
+  const probationSalary = getProbationSalaryValue();
   const kpi = getKpiValue();
+  const normalPremium = toNumber(normalPremiumInput.value);
 
-  normalIncome.textContent = formatCurrency(salary + kpi + toNumber(normalPremiumInput.value));
+  probationAverageIncome.textContent = formatCurrency(probationSalary + kpi + normalPremium);
+  normalIncome.textContent = formatCurrency(salary + kpi + normalPremium);
   strongIncome.textContent = formatCurrency(salary + kpi + toNumber(strongPremiumInput.value));
   topIncome.textContent = formatCurrency(salary + kpi + toNumber(topPremiumInput.value));
 }
 
 function getPremiumForDeals(deals) {
   const targetDeals = Math.floor(Number(deals) || 0);
+  const dealIndex = getDealStageIndex();
   const rows = Array.from(calculationTable.querySelectorAll("tbody tr"))
     .map((row) => ({
-      deals: Math.floor(toNumber(row.querySelector('[data-field="deals"]')?.textContent || "0")),
+      deals: Math.floor(toNumber(row.querySelector(`[data-stage-index="${dealIndex}"]`)?.textContent || "0")),
       premium: toNumber(row.querySelector('[data-field="premium"]')?.textContent || "0"),
     }))
     .filter((item) => Number.isFinite(item.deals) && item.deals <= targetDeals)
     .sort((a, b) => a.deals - b.deals);
 
-  return rows.length ? rows[rows.length - 1].premium : 0;
+  const exactRow = rows.find((item) => item.deals === targetDeals);
+
+  if (exactRow) {
+    return exactRow.premium;
+  }
+
+  const averageCheck = toNumber(averageCheckInput.value);
+  const salesPlan = toNumber(salesPlanInput.value);
+  const sales = targetDeals * averageCheck;
+  const planPercent = salesPlan > 0 ? (sales / salesPlan) * 100 : 0;
+
+  return sales * (getManagerPercent(planPercent) / 100);
 }
 
 function getCalculationMetricsFromTable() {
+  const stages = getFunnelStages();
+  const meetingIndex = getMeetingStageIndex(stages);
+  const dealIndex = getDealStageIndex(stages);
+
   return Array.from(calculationTable.querySelectorAll("tbody tr")).map((row) => ({
-    leads: toNumber(row.querySelector('[data-field="leads"]')?.textContent || "0"),
-    meetingDone: toNumber(row.querySelector('[data-field="meetingDone"]')?.textContent || "0"),
-    deals: Math.floor(toNumber(row.querySelector('[data-field="deals"]')?.textContent || "0")),
+    leads: toNumber(row.querySelector('[data-stage-index="0"]')?.textContent || "0"),
+    meetingDone: toNumber(row.querySelector(`[data-stage-index="${meetingIndex}"]`)?.textContent || "0"),
+    deals: toNumber(row.querySelector(`[data-stage-index="${dealIndex}"]`)?.textContent || "0"),
     sales: toNumber(row.querySelector('[data-field="sales"]')?.textContent || "0"),
     premium: toNumber(row.querySelector('[data-field="premium"]')?.textContent || "0"),
   })).filter((item) => item.deals >= 0);
@@ -334,15 +457,21 @@ function getReverseMetricsForPremium(requiredPremium, fixedIncome, context) {
   }
 
   const deals = sales / context.averageCheck;
-  const meetingDone = context.dealsConversion > 0 ? deals / context.dealsConversion : 0;
-  const meetingSet = context.meetingDoneConversion > 0 ? meetingDone / context.meetingDoneConversion : 0;
-  const qualified = context.meetingSetConversion > 0 ? meetingSet / context.meetingSetConversion : 0;
-  const answered = context.qualifiedConversion > 0 ? qualified / context.qualifiedConversion : 0;
-  const leads = context.answeredConversion > 0 ? answered / context.answeredConversion : 0;
+  const stageValues = Array(context.stages.length).fill(0);
+  const dealIndex = getDealStageIndex(context.stages);
+  const meetingIndex = getMeetingStageIndex(context.stages);
+
+  stageValues[dealIndex] = deals;
+
+  for (let index = dealIndex; index > 0; index -= 1) {
+    const conversion = context.stages[index].conversion;
+
+    stageValues[index - 1] = conversion > 0 ? stageValues[index] / conversion : 0;
+  }
 
   return {
-    leads,
-    meetingDone,
+    leads: stageValues[0] || 0,
+    meetingDone: stageValues[meetingIndex] || 0,
     deals,
     sales,
     premium: requiredPremium,
@@ -426,23 +555,20 @@ function getMonthAnalytics() {
     const premium = getPremiumForDeals(deals);
     const income = salary + kpi + premium;
     const revenue = deals * averageCheck;
+    const difference = revenue - income;
 
     row.querySelector(".month-income").textContent = formatCurrency(income);
 
-    return { month, deals, premium, income, revenue };
+    return { month, deals, premium, income, revenue, difference };
   });
 }
 
 function createCalculationRow() {
   const row = document.createElement("tr");
+  const stages = getFunnelStages();
 
   row.innerHTML = `
-    <td data-field="leads"></td>
-    <td data-field="answered"></td>
-    <td data-field="qualified"></td>
-    <td data-field="meetingSet"></td>
-    <td data-field="meetingDone"></td>
-    <td data-field="deals"></td>
+    ${stages.map((stage, index) => `<td data-stage-index="${index}"></td>`).join("")}
     <td data-field="sales"></td>
     <td data-field="planPercent"></td>
     <td data-field="managerPercent"></td>
@@ -459,7 +585,13 @@ function createFunnelRow(stage = "Новая стадия", value = "") {
     <td><input type="text"></td>
     <td><input class="funnel-value" type="number" min="0" step="1"></td>
     <td class="conversion">-</td>
-    <td><button class="icon-button remove-row" type="button" aria-label="Удалить строку">x</button></td>
+    <td>
+      <div class="row-actions">
+        <button class="icon-button move-row-up" type="button" aria-label="Переместить вверх">↑</button>
+        <button class="icon-button move-row-down" type="button" aria-label="Переместить вниз">↓</button>
+        <button class="icon-button remove-row" type="button" aria-label="Удалить строку">x</button>
+      </div>
+    </td>
   `;
 
   const inputs = row.querySelectorAll("input");
@@ -486,24 +618,59 @@ function getBonusClass(index) {
 }
 
 function applyBonusRowClasses() {
-  Array.from(bonusTable.querySelectorAll("tbody tr")).forEach((row, index) => {
+  const rows = Array.from(bonusTable.querySelectorAll("tbody tr"));
+
+  rows.forEach((row, index) => {
     row.className = getBonusClass(index);
+    const cells = row.querySelectorAll("td");
+    const inputs = row.querySelectorAll("input");
+    const isLast = index === rows.length - 1;
+
+    cells[0]?.classList.add("percent-cell");
+    cells[2]?.classList.add("percent-cell");
+
+    inputs[0]?.classList.add("bonus-percent-input");
+    inputs[2]?.classList.add("bonus-percent-input");
+
+    if (isLast) {
+      cells[1]?.classList.remove("percent-cell");
+      inputs[1].type = "text";
+      inputs[1].readOnly = true;
+      inputs[1].value = "и выше";
+      inputs[1].classList.add("bonus-above-input");
+    } else {
+      cells[1]?.classList.add("percent-cell");
+      inputs[1].type = "number";
+      inputs[1].readOnly = false;
+      inputs[1].min = "0";
+      inputs[1].step = "0.1";
+      inputs[1].classList.add("bonus-percent-input", "bonus-to-input");
+
+      if (String(inputs[1].value).toLowerCase().includes("выше")) {
+        inputs[1].value = "";
+      }
+    }
   });
+}
+
+function normalizePercentValue(value) {
+  return String(value).trim() === "" ? "" : parsePercent(value);
 }
 
 function createBonusRow(from = "", to = "", percent = "") {
   const row = document.createElement("tr");
 
   row.innerHTML = `
-    <td><input type="text"></td>
-    <td><input type="text"></td>
-    <td><input type="text"></td>
+    <td class="percent-cell"><input class="bonus-percent-input" type="number" min="0" step="0.1"></td>
+    <td class="percent-cell"><input class="bonus-percent-input bonus-to-input" type="number" min="0" step="0.1"></td>
+    <td class="percent-cell"><input class="bonus-percent-input" type="number" min="0" step="0.1"></td>
+    <td><button class="icon-button remove-bonus-row" type="button" aria-label="Удалить строку">x</button></td>
   `;
 
   const inputs = row.querySelectorAll("input");
-  inputs[0].value = from;
-  inputs[1].value = to;
-  inputs[2].value = percent;
+  inputs[0].value = normalizePercentValue(from);
+  inputs[1].value = String(to).toLowerCase().includes("выше") ? "" : normalizePercentValue(to);
+  inputs[2].value = normalizePercentValue(percent);
 
   return row;
 }
@@ -520,9 +687,22 @@ function getStandardLabel(status) {
 }
 
 function createStageOptions(selectedValue = "") {
-  return STAGE_OPTIONS.map((stage) => (
+  const stages = getFunnelStages().map((stage) => stage.name);
+
+  return stages.map((stage) => (
     `<option${stage === selectedValue ? " selected" : ""}>${stage}</option>`
   )).join("");
+}
+
+function updateConversionStageSelects() {
+  conversionStandardsTable.querySelectorAll(".standard-stage-from, .standard-stage-to").forEach((select) => {
+    const selectedValue = select.value;
+
+    select.innerHTML = createStageOptions(selectedValue);
+    select.value = Array.from(select.options).some((option) => option.value === selectedValue)
+      ? selectedValue
+      : select.options[0]?.value || "";
+  });
 }
 
 function createConversionStandardRow(from = "", to = "", percent = "", status = "normal") {
@@ -557,11 +737,13 @@ function getCalculationContext() {
   const averageCheck = toNumber(averageCheckInput.value);
   const salesPlan = toNumber(salesPlanInput.value);
   const workDays = Number(workDaysInput.value) || 0;
+  const stages = getFunnelStages();
 
   return {
     averageCheck,
     salesPlan,
     workDays,
+    stages,
     answeredConversion: getFunnelConversion(1),
     qualifiedConversion: getFunnelConversion(2),
     meetingSetConversion: getFunnelConversion(3),
@@ -571,22 +753,28 @@ function getCalculationContext() {
 }
 
 function calculateCalculationMetrics(leads, context = getCalculationContext()) {
-  const answered = leads * context.answeredConversion;
-  const qualified = answered * context.qualifiedConversion;
-  const meetingSet = qualified * context.meetingSetConversion;
-  const meetingDone = meetingSet * context.meetingDoneConversion;
-  const deals = Math.floor(meetingDone * context.dealsConversion);
+  const stageValues = context.stages.map((stage, index) => {
+    if (index === 0) {
+      return leads;
+    }
+
+    return 0;
+  });
+
+  for (let index = 1; index < context.stages.length; index += 1) {
+    stageValues[index] = stageValues[index - 1] * context.stages[index].conversion;
+  }
+
+  const dealIndex = getDealStageIndex(context.stages);
+  const deals = Math.floor(stageValues[dealIndex] || 0);
+  stageValues[dealIndex] = deals;
   const sales = deals * context.averageCheck;
   const planPercent = context.salesPlan > 0 ? (sales / context.salesPlan) * 100 : 0;
   const managerPercent = getManagerPercent(planPercent);
   const premium = sales * (managerPercent / 100);
 
   return {
-    leads,
-    answered,
-    qualified,
-    meetingSet,
-    meetingDone,
+    stageValues,
     deals,
     sales,
     planPercent,
@@ -596,12 +784,16 @@ function calculateCalculationMetrics(leads, context = getCalculationContext()) {
 }
 
 function fillCalculationRow(row, metrics) {
-  row.querySelector('[data-field="leads"]').textContent = formatDecimal(metrics.leads);
-  row.querySelector('[data-field="answered"]').textContent = formatDecimal(metrics.answered);
-  row.querySelector('[data-field="qualified"]').textContent = formatDecimal(metrics.qualified);
-  row.querySelector('[data-field="meetingSet"]').textContent = formatDecimal(metrics.meetingSet);
-  row.querySelector('[data-field="meetingDone"]').textContent = formatDecimal(metrics.meetingDone);
-  row.querySelector('[data-field="deals"]').textContent = formatNumber(metrics.deals);
+  const dealIndex = getDealStageIndex();
+
+  metrics.stageValues.forEach((value, index) => {
+    const cell = row.querySelector(`[data-stage-index="${index}"]`);
+
+    if (cell) {
+      cell.textContent = index === dealIndex ? formatNumber(value) : formatDecimal(value);
+    }
+  });
+
   row.querySelector('[data-field="sales"]').textContent = formatNumber(metrics.sales);
   row.querySelector('[data-field="planPercent"]').textContent = formatPercent(metrics.planPercent);
   row.querySelector('[data-field="managerPercent"]').textContent = formatPercent(metrics.managerPercent, 2);
@@ -609,15 +801,13 @@ function fillCalculationRow(row, metrics) {
 }
 
 function getPlanRowMetrics(context) {
-  if (context.salesPlan <= 0 || context.averageCheck <= 0) {
+  if (context.salesPlan <= 0 || context.averageCheck <= 0 || !context.stages.length) {
     return null;
   }
 
-  const conversionProduct = context.answeredConversion
-    * context.qualifiedConversion
-    * context.meetingSetConversion
-    * context.meetingDoneConversion
-    * context.dealsConversion;
+  const conversionProduct = context.stages
+    .slice(1)
+    .reduce((product, stage) => product * stage.conversion, 1);
 
   if (conversionProduct <= 0) {
     return null;
@@ -644,6 +834,32 @@ function getPlanRowMetrics(context) {
   }
 
   return bestMetrics;
+}
+
+function updateCalculationStructure() {
+  const stages = getFunnelStages();
+  const headerRow = calculationTable.querySelector("thead tr");
+  const bodyRows = calculationTable.querySelectorAll("tbody tr");
+  const fixedHeaders = ["Сумма продаж", "% от плана выручки", "% менеджера", "Сумма премии менеджера"];
+
+  headerRow.innerHTML = `
+    ${stages.map((stage) => `<th>${stage.name}</th>`).join("")}
+    ${fixedHeaders.map((header) => `<th>${header}</th>`).join("")}
+  `;
+
+  bodyRows.forEach((row) => {
+    const isPlanRow = row.classList.contains("plan-row");
+
+    row.innerHTML = `
+      ${stages.map((stage, index) => `<td data-stage-index="${index}"></td>`).join("")}
+      <td data-field="sales"></td>
+      <td data-field="planPercent"></td>
+      <td data-field="managerPercent"></td>
+      <td data-field="premium"></td>
+    `;
+
+    row.classList.toggle("plan-row", isPlanRow);
+  });
 }
 
 function updatePlanRow(baseMetrics, context) {
@@ -676,6 +892,8 @@ function updatePlanRow(baseMetrics, context) {
 }
 
 function updateCalculationTable() {
+  updateCalculationStructure();
+
   const rows = Array.from(calculationTable.querySelectorAll("tbody tr:not(.plan-row)"));
   const newRequestsPerDay = Number(newRequestsPerDayInput.value) || 0;
   const context = getCalculationContext();
@@ -692,11 +910,14 @@ function updateCalculationTable() {
 }
 
 function getPaybackStatus(revenue, income) {
-  if (revenue < income * 0.95) {
+  const difference = revenue - income;
+  const nearZero = Math.max(5000, income * 0.05);
+
+  if (difference < -nearZero) {
     return "loss";
   }
 
-  if (revenue <= income * 1.05) {
+  if (Math.abs(difference) <= nearZero) {
     return "even";
   }
 
@@ -748,9 +969,15 @@ function updateIncomeDynamicsChart(items) {
   incomeDynamicsChart = new Chart(document.querySelector("#incomeDynamicsChart"), {
     type: "line",
     data: chartData,
+    plugins: [currencyLabelsPlugin],
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 28,
+        },
+      },
       plugins: {
         legend: { display: false },
       },
@@ -794,23 +1021,35 @@ function renderFallbackIncomeChart(items) {
 function updatePaybackSummary(items) {
   const totalRevenue = items.reduce((sum, item) => sum + item.revenue, 0);
   const totalIncome = items.reduce((sum, item) => sum + item.income, 0);
+  const difference = totalRevenue - totalIncome;
   const status = getPaybackStatus(totalRevenue, totalIncome);
+  const firstProfitIndex = items.findIndex((item) => item.difference > 0);
+  const firstProfitItem = firstProfitIndex >= 0 ? items[firstProfitIndex] : null;
+  const profitText = firstProfitItem
+    ? ` Предположительно кандидат начнет окупаться на ${firstProfitIndex + 1} месяц.`
+    : " По текущему сценарию кандидат пока не выходит в окупаемость.";
 
   paybackSummary.classList.remove("is-loss", "is-even", "is-profit");
 
+  if (firstProfitItem) {
+    paybackSummary.textContent = `🟢 Кандидат окупится предположительно на ${firstProfitIndex + 1} месяц: компания получит на ${formatCurrency(firstProfitItem.difference)} больше, чем платит сотруднику.`;
+    paybackSummary.classList.add("is-profit");
+    return;
+  }
+
   if (status === "loss") {
-    paybackSummary.textContent = "Кандидат пока не окупается";
+    paybackSummary.textContent = `🔴 Кандидат пока не окупается: компания платит на ${formatCurrency(Math.abs(difference))} больше, чем получает выручки.${profitText}`;
     paybackSummary.classList.add("is-loss");
     return;
   }
 
   if (status === "even") {
-    paybackSummary.textContent = "Кандидат вышел в точку окупаемости";
+    paybackSummary.textContent = `⚪ Стоимость кандидата примерно равна выручке от него: разница между выручкой и доходом ${formatCurrency(Math.abs(difference))}.${profitText}`;
     paybackSummary.classList.add("is-even");
     return;
   }
 
-  paybackSummary.textContent = "Кандидат приносит прибыль";
+  paybackSummary.textContent = `🟢 Кандидат окупается: компания получает на ${formatCurrency(difference)} больше, чем платит сотруднику.${profitText}`;
   paybackSummary.classList.add("is-profit");
 }
 
@@ -825,18 +1064,29 @@ function updatePaybackChart(items) {
     datasets: [
       {
         type: "bar",
-        label: "Выручка компании",
-        data: items.map((item) => item.revenue),
+        label: "Разница",
+        data: items.map((item) => item.difference),
         backgroundColor: getPaybackColors(items),
         borderRadius: 8,
+        order: 2,
       },
       {
         type: "line",
-        label: "Доход кандидата",
+        label: "Выручка от сотрудника",
+        data: items.map((item) => item.revenue),
+        borderColor: "#16a34a",
+        backgroundColor: "#16a34a",
+        tension: 0.35,
+        order: 1,
+      },
+      {
+        type: "line",
+        label: "Совокупный доход сотрудника",
         data: items.map((item) => item.income),
         borderColor: "#334155",
         backgroundColor: "#334155",
         tension: 0.35,
+        order: 1,
       },
     ],
   };
@@ -849,9 +1099,15 @@ function updatePaybackChart(items) {
 
   paybackChart = new Chart(document.querySelector("#paybackChart"), {
     data: chartData,
+    plugins: [currencyLabelsPlugin],
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 32,
+        },
+      },
       plugins: {
         legend: { position: "bottom" },
         tooltip: {
@@ -875,7 +1131,7 @@ function updatePaybackChart(items) {
 function renderFallbackPaybackChart(items) {
   const canvas = document.querySelector("#paybackChart");
   const card = canvas.closest(".chart-card");
-  const maxRevenue = Math.max(...items.map((item) => Math.max(item.revenue, item.income)), 1);
+  const maxDifference = Math.max(...items.map((item) => Math.abs(item.difference)), 1);
   let fallback = card.querySelector(".fallback-chart");
 
   canvas.hidden = true;
@@ -893,9 +1149,9 @@ function renderFallbackPaybackChart(items) {
       <div class="fallback-chart-row">
         <strong>${item.month}</strong>
         <div class="fallback-chart-track">
-          <div class="fallback-chart-fill is-${status}" style="width: ${(item.revenue / maxRevenue) * 100}%"></div>
+          <div class="fallback-chart-fill is-${status}" style="width: ${(Math.abs(item.difference) / maxDifference) * 100}%"></div>
         </div>
-        <span>${formatCurrency(item.revenue)}</span>
+        <span>${formatCurrency(item.difference)}</span>
       </div>
     `;
   }).join("");
@@ -911,6 +1167,7 @@ function updateAnalyticsBlocks() {
 
 function updateAllCalculations() {
   updateFunnelConversions();
+  updateConversionStageSelects();
   updateNorms();
   updateIncomeScenarios();
   applyBonusRowClasses();
@@ -921,8 +1178,15 @@ function updateAllCalculations() {
 
 function addFunnelRow() {
   const tbody = funnelTable.querySelector("tbody");
+  const row = createFunnelRow();
+  const rows = tbody.querySelectorAll("tr");
 
-  tbody.append(createFunnelRow());
+  if (rows.length > 1) {
+    tbody.insertBefore(row, rows[rows.length - 1]);
+  } else {
+    tbody.append(row);
+  }
+
   updateAllCalculations();
 }
 
@@ -937,13 +1201,38 @@ function removeFunnelRow(button) {
   updateAllCalculations();
 }
 
+function moveFunnelRow(button, direction) {
+  const row = button.closest("tr");
+
+  if (direction < 0 && row.previousElementSibling) {
+    row.parentElement.insertBefore(row, row.previousElementSibling);
+  }
+
+  if (direction > 0 && row.nextElementSibling) {
+    row.parentElement.insertBefore(row.nextElementSibling, row);
+  }
+
+  updateAllCalculations();
+}
+
 function addCalculationRow() {
   calculationTable.querySelector("tbody").append(createCalculationRow());
   updateAllCalculations();
 }
 
 function addBonusRow() {
-  bonusTable.querySelector("tbody").append(createBonusRow("100%", "и выше", "4%"));
+  bonusTable.querySelector("tbody").append(createBonusRow("100", "и выше", "4"));
+  updateAllCalculations();
+}
+
+function removeBonusRow(button) {
+  const rows = bonusTable.querySelectorAll("tbody tr");
+
+  if (rows.length <= 1) {
+    return;
+  }
+
+  button.closest("tr").remove();
   updateAllCalculations();
 }
 
@@ -971,6 +1260,12 @@ function toggleKpi(show) {
   updateIncomeScenarios();
 }
 
+function toggleProbationSalary(show) {
+  probationSalaryCard.hidden = !show;
+  showProbationSalaryButton.hidden = show;
+  updateAllCalculations();
+}
+
 function toggleTableVisibility(target, button, show) {
   target.classList.toggle("is-hidden", !show);
   button.textContent = show ? "Скрыть" : "Показать";
@@ -990,6 +1285,14 @@ function clampStandardPercent(input) {
   input.value = Math.min(100, Math.max(0, value));
 }
 
+function clampBonusPercent(input) {
+  if (input.value === "") {
+    return;
+  }
+
+  input.value = Math.max(0, toNumber(input.value));
+}
+
 function saveData() {
   const data = {
     simpleInputs: {
@@ -999,6 +1302,9 @@ function saveData() {
       averageCheck: averageCheckInput.value,
       plannedDeals: document.querySelector("#plannedDeals")?.value || "",
       salaryInput: salaryInput.value,
+      probationSalaryInput: probationSalaryInput.value,
+      probationSalaryLabel: probationSalaryLabelInput.value,
+      probationAverageLabel: probationAverageLabelInput.value,
       kpiInput: kpiInput.value,
       normalPremiumInput: normalPremiumInput.value,
       strongPremiumInput: strongPremiumInput.value,
@@ -1006,11 +1312,14 @@ function saveData() {
       targetIncomeInput: targetIncomeInput.value,
     },
     kpiHidden: kpiCard.hidden,
+    probationSalaryHidden: probationSalaryCard.hidden,
+    probationAverageHidden: probationAverageCard.hidden,
     incomeScenariosHidden: incomeContent.classList.contains("is-hidden"),
+    incomeDynamicsHidden: incomeDynamicsContent.classList.contains("is-hidden"),
     incomePathHidden: incomePathCard.classList.contains("is-hidden"),
     calculationHidden: calculationTableWrap.classList.contains("is-hidden"),
     conversionStandardsHidden: conversionStandardsWrap.classList.contains("is-hidden"),
-    paybackChartHidden: paybackChartWrap.classList.contains("is-hidden"),
+    paybackChartHidden: paybackBlock.classList.contains("is-collapsed"),
     funnelRows: Array.from(funnelTable.querySelectorAll("tbody tr")).map((row) => {
       const inputs = row.querySelectorAll("input");
 
@@ -1096,8 +1405,22 @@ function restoreData() {
     toggleKpi(!data.kpiHidden);
   }
 
+  if (typeof data.probationSalaryHidden === "boolean") {
+    probationSalaryCard.hidden = data.probationSalaryHidden;
+    showProbationSalaryButton.hidden = !data.probationSalaryHidden;
+  }
+
+  if (typeof data.probationAverageHidden === "boolean") {
+    probationAverageCard.hidden = data.probationAverageHidden;
+    showProbationAverageButton.hidden = !data.probationAverageHidden;
+  }
+
   if (typeof data.incomeScenariosHidden === "boolean") {
     toggleTableVisibility(incomeContent, toggleIncomeScenariosButton, !data.incomeScenariosHidden);
+  }
+
+  if (typeof data.incomeDynamicsHidden === "boolean") {
+    toggleTableVisibility(incomeDynamicsContent, toggleIncomeDynamicsButton, !data.incomeDynamicsHidden);
   }
 
   if (typeof data.incomePathHidden === "boolean") {
@@ -1114,8 +1437,9 @@ function restoreData() {
   }
 
   if (typeof data.paybackChartHidden === "boolean") {
-    toggleTableVisibility(paybackChartWrap, togglePaybackChartButton, !data.paybackChartHidden);
-    togglePaybackChartButton.textContent = data.paybackChartHidden ? "Показать график" : "Скрыть график";
+    paybackBlock.classList.toggle("is-collapsed", data.paybackChartHidden);
+    paybackChartWrap.classList.toggle("is-hidden", data.paybackChartHidden);
+    togglePaybackChartButton.textContent = data.paybackChartHidden ? "+" : "Скрыть график";
   }
 
   if (Array.isArray(data.funnelRows) && data.funnelRows.length) {
@@ -1242,6 +1566,7 @@ async function exportToExcel() {
     item.premium,
     item.income,
     item.revenue,
+    item.difference,
   ]);
 
   addSheet(workbook, "Нормы", tableToRows("Нормы", document.querySelector("#normsTable")));
@@ -1251,6 +1576,7 @@ async function exportToExcel() {
     ["Сценарии дохода"],
     ["Параметр", "Сумма"],
     ["Оклад", toNumber(salaryInput.value)],
+    [probationSalaryLabelInput.value || "Оклад на испытательный срок", toNumber(probationSalaryInput.value)],
     ["KPI", getKpiValue()],
     ["Премия в норме", toNumber(normalPremiumInput.value)],
     ["Премия выше среднего", toNumber(strongPremiumInput.value)],
@@ -1262,24 +1588,29 @@ async function exportToExcel() {
   addSheet(workbook, "Нормативы конверсий", tableToRows("Нормативы конверсий", document.querySelector("#conversionStandardsTable")));
   addSheet(workbook, "Динамика дохода", [
     ["Динамика дохода из месяца в месяц"],
-    ["Месяц", "Количество сделок", "Премия", "Совокупный доход", "Выручка"],
+    ["Месяц", "Количество сделок", "Премия", "Совокупный доход", "Выручка", "Разница"],
     ...monthlyRows,
   ]);
   addSheet(workbook, "Окупаемость", [
     ["Окупаемость кандидата"],
     ["Статус", paybackSummary.textContent],
-    ["Месяц", "Количество сделок", "Выручка", "Совокупный доход кандидата"],
-    ...getMonthAnalytics().map((item) => [item.month, item.deals, item.revenue, item.income]),
+    ["Месяц", "Количество сделок", "Выручка", "Совокупный доход кандидата", "Разница"],
+    ...getMonthAnalytics().map((item) => [item.month, item.deals, item.revenue, item.income, item.difference]),
   ]);
 
   XLSX.writeFile(workbook, "raschet-premii.xlsx");
 }
 
 function switchPaybackChart() {
-  const show = paybackChartWrap.classList.contains("is-hidden");
+  const show = paybackBlock.classList.contains("is-collapsed");
 
+  paybackBlock.classList.toggle("is-collapsed", !show);
   paybackChartWrap.classList.toggle("is-hidden", !show);
-  togglePaybackChartButton.textContent = show ? "Скрыть график" : "Показать график";
+  togglePaybackChartButton.textContent = show ? "Скрыть график" : "+";
+}
+
+function switchIncomeDynamics() {
+  switchTableVisibility(incomeDynamicsContent, toggleIncomeDynamicsButton);
 }
 
 function switchIncomePath() {
@@ -1299,12 +1630,30 @@ document.addEventListener("input", (event) => {
     clampStandardPercent(event.target);
   }
 
+  if (event.target.classList.contains("bonus-percent-input")) {
+    clampBonusPercent(event.target);
+  }
+
   updateAllCalculations();
 });
 
 funnelTable.addEventListener("click", (event) => {
   if (event.target.classList.contains("remove-row")) {
     removeFunnelRow(event.target);
+  }
+
+  if (event.target.classList.contains("move-row-up")) {
+    moveFunnelRow(event.target, -1);
+  }
+
+  if (event.target.classList.contains("move-row-down")) {
+    moveFunnelRow(event.target, 1);
+  }
+});
+
+bonusTable.addEventListener("click", (event) => {
+  if (event.target.classList.contains("remove-bonus-row")) {
+    removeBonusRow(event.target);
   }
 });
 
@@ -1318,6 +1667,8 @@ conversionStandardsTable.addEventListener("change", (event) => {
   if (event.target.classList.contains("standard-status")) {
     updateConversionStandardStatus(event.target);
   }
+
+  updateAllCalculations();
 });
 
 addFunnelRowButton.addEventListener("click", addFunnelRow);
@@ -1334,10 +1685,29 @@ toggleCalculationTableButton.addEventListener("click", () => {
 toggleConversionStandardsButton.addEventListener("click", () => {
   switchTableVisibility(conversionStandardsWrap, toggleConversionStandardsButton);
 });
+toggleIncomeDynamicsButton.addEventListener("click", switchIncomeDynamics);
 togglePaybackChartButton.addEventListener("click", switchPaybackChart);
-hideKpiButton.addEventListener("click", () => toggleKpi(false));
-showKpiButton.addEventListener("click", () => toggleKpi(true));
-exportExcelButton.addEventListener("click", exportToExcel);
+hideKpiButton.addEventListener("click", () => {
+  toggleKpi(false);
+  updateAllCalculations();
+});
+showKpiButton.addEventListener("click", () => {
+  toggleKpi(true);
+  updateAllCalculations();
+});
+hideProbationSalaryButton.addEventListener("click", () => toggleProbationSalary(false));
+showProbationSalaryButton.addEventListener("click", () => toggleProbationSalary(true));
+hideProbationAverageButton.addEventListener("click", () => {
+  probationAverageCard.hidden = true;
+  showProbationAverageButton.hidden = false;
+  updateAllCalculations();
+});
+showProbationAverageButton.addEventListener("click", () => {
+  probationAverageCard.hidden = false;
+  showProbationAverageButton.hidden = true;
+  updateAllCalculations();
+});
+exportExcelButton?.addEventListener("click", exportToExcel);
 saveDataButton.addEventListener("click", saveData);
 restoreData();
 formatMoneyInputs();

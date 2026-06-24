@@ -123,28 +123,33 @@
               <th>От</th>
               <th>До</th>
               <th>% премии</th>
+              <th class="action-column"></th>
             </tr>
           </thead>
           <tbody>
             <tr class="bonus-low">
-              <td><input type="text" value="0%"></td>
-              <td><input type="text" value="19%"></td>
-              <td><input type="text" value="1%"></td>
+              <td class="percent-cell"><input class="bonus-percent-input" type="number" min="0" step="0.1" value="0"></td>
+              <td class="percent-cell"><input class="bonus-percent-input bonus-to-input" type="number" min="0" step="0.1" value="19"></td>
+              <td class="percent-cell"><input class="bonus-percent-input" type="number" min="0" step="0.1" value="1"></td>
+              <td><button class="icon-button remove-bonus-row" type="button" aria-label="Удалить строку">x</button></td>
             </tr>
             <tr class="bonus-middle">
-              <td><input type="text" value="20%"></td>
-              <td><input type="text" value="49%"></td>
-              <td><input type="text" value="2%"></td>
+              <td class="percent-cell"><input class="bonus-percent-input" type="number" min="0" step="0.1" value="20"></td>
+              <td class="percent-cell"><input class="bonus-percent-input bonus-to-input" type="number" min="0" step="0.1" value="49"></td>
+              <td class="percent-cell"><input class="bonus-percent-input" type="number" min="0" step="0.1" value="2"></td>
+              <td><button class="icon-button remove-bonus-row" type="button" aria-label="Удалить строку">x</button></td>
             </tr>
             <tr class="bonus-good">
-              <td><input type="text" value="50%"></td>
-              <td><input type="text" value="99%"></td>
-              <td><input type="text" value="3%"></td>
+              <td class="percent-cell"><input class="bonus-percent-input" type="number" min="0" step="0.1" value="50"></td>
+              <td class="percent-cell"><input class="bonus-percent-input bonus-to-input" type="number" min="0" step="0.1" value="99"></td>
+              <td class="percent-cell"><input class="bonus-percent-input" type="number" min="0" step="0.1" value="3"></td>
+              <td><button class="icon-button remove-bonus-row" type="button" aria-label="Удалить строку">x</button></td>
             </tr>
             <tr class="bonus-best">
-              <td><input type="text" value="100%"></td>
-              <td><input type="text" value="и выше"></td>
-              <td><input type="text" value="4%"></td>
+              <td class="percent-cell"><input class="bonus-percent-input" type="number" min="0" step="0.1" value="100"></td>
+              <td><input class="bonus-to-input bonus-above-input" type="text" value="и выше" readonly></td>
+              <td class="percent-cell"><input class="bonus-percent-input" type="number" min="0" step="0.1" value="4"></td>
+              <td><button class="icon-button remove-bonus-row" type="button" aria-label="Удалить строку">x</button></td>
             </tr>
           </tbody>
         </table>
@@ -162,14 +167,22 @@
             <span>Оклад</span>
             <span class="money-field"><input id="salaryInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
           </label>
+          <div class="income-card probation-salary-card" id="probationSalaryCard">
+            <div class="income-card-top">
+              <textarea id="probationSalaryLabel" class="income-card-label-input" rows="2" aria-label="Название поля оклада на испытательный срок">Оклад на испытательный срок</textarea>
+              <button class="icon-button remove-card-button" type="button" id="hideProbationSalary" aria-label="Убрать оклад на испытательный срок">x</button>
+            </div>
+            <span class="money-field"><input id="probationSalaryInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
+          </div>
+          <button class="plus-button tiny-restore-button" type="button" id="showProbationSalary" hidden>Добавить оклад на ИС</button>
           <div class="income-card kpi-card" id="kpiCard">
             <div class="income-card-top">
               <span>KPI</span>
-              <button class="small-text-button" type="button" id="hideKpi">убрать</button>
+              <button class="icon-button remove-card-button" type="button" id="hideKpi" aria-label="Убрать KPI">x</button>
             </div>
             <span class="money-field"><input id="kpiInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
           </div>
-          <button class="secondary-button restore-kpi-button" type="button" id="showKpi" hidden>Вернуть KPI</button>
+          <button class="plus-button tiny-restore-button restore-kpi-button" type="button" id="showKpi" hidden>Добавить KPI</button>
           <label class="income-card">
             <span>Премия в норме</span>
             <span class="money-field"><input id="normalPremiumInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
@@ -183,6 +196,12 @@
             <span class="money-field"><input id="topPremiumInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
           </label>
         </div>
+        <div class="scenario-summary-row" id="probationAverageCard">
+          <input id="probationAverageLabel" class="scenario-summary-label" type="text" value="Средний совокупный доход на Испытательный срок">
+          <strong id="probationAverageIncome">0 ₽</strong>
+          <button class="icon-button remove-card-button" type="button" id="hideProbationAverage" aria-label="Убрать средний доход на испытательный срок">x</button>
+        </div>
+        <button class="plus-button" type="button" id="showProbationAverage" hidden>+ Средний доход на испытательный срок</button>
         <div class="table-wrap">
           <table id="incomeScenariosTable">
             <thead>
@@ -537,8 +556,9 @@
     <section class="table-block income-dynamics-block">
       <div class="table-title-row">
         <h2>📈 Динамика дохода из месяца в месяц</h2>
+        <button class="secondary-button" type="button" id="toggleIncomeDynamics">Скрыть</button>
       </div>
-      <div class="analytics-content">
+      <div class="analytics-content" id="incomeDynamicsContent">
         <div class="table-wrap">
           <table id="incomeDynamicsTable">
             <thead>
@@ -578,7 +598,7 @@
       </div>
     </section>
 
-    <section class="table-block payback-block">
+    <section class="table-block payback-block" id="paybackBlock">
       <div class="table-title-row">
         <h2>⚖️ Окупаемость кандидата</h2>
         <button class="secondary-button" type="button" id="togglePaybackChart">Скрыть график</button>
@@ -592,7 +612,6 @@
     </section>
 
     <section class="save-section">
-      <button class="save-button export-button" type="button" id="exportExcel">📥 Скачать расчет в Excel</button>
       <button class="save-button" type="button" id="saveData">Сохранить</button>
       <span class="save-status" id="saveStatus" aria-live="polite"></span>
     </section>
