@@ -80,6 +80,25 @@ td select {
   background: #fff;
 }
 
+.money-field.sales-plan-money,
+.money-field.table-money-field {
+  grid-template-columns: minmax(0, 1fr) auto;
+  justify-content: stretch;
+}
+
+.money-field.sales-plan-money > span,
+.money-field.table-money-field > span {
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
+#workDays,
+#newRequestsPerDay,
+#averageCheck {
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
 td select {
   font-size: 16px;
 }
@@ -252,7 +271,7 @@ tr:last-child td {
 
 .income-content {
   display: grid;
-  grid-template-columns: minmax(320px, 0.72fr) minmax(420px, 1.28fr);
+  grid-template-columns: minmax(390px, 0.95fr) minmax(420px, 1.05fr);
   gap: 22px;
   padding: 20px;
   align-items: start;
@@ -276,7 +295,7 @@ tr:last-child td {
 
 .income-card {
   display: grid;
-  grid-template-columns: minmax(120px, 0.9fr) minmax(160px, 1fr);
+  grid-template-columns: minmax(190px, 1fr) minmax(118px, 0.52fr);
   align-items: center;
   gap: 18px;
   min-height: 92px;
@@ -287,8 +306,41 @@ tr:last-child td {
   font-weight: 700;
 }
 
+.income-card.is-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 54px;
+  padding: 12px 16px;
+  border-style: dashed;
+  background: #f3fff9;
+}
+
+.income-card.is-collapsed .money-field {
+  display: none;
+}
+
+.income-card.is-collapsed .income-card-top {
+  align-items: center;
+}
+
+.income-card.is-collapsed .income-card-label-input {
+  min-height: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+
+.income-card.is-collapsed .icon-button {
+  width: 30px;
+  height: 30px;
+  color: var(--accent-dark);
+  background: #e9fbf5;
+  font-size: 20px;
+  font-weight: 900;
+}
+
 .probation-salary-card {
-  grid-template-columns: minmax(120px, 0.9fr) minmax(160px, 1fr);
+  grid-template-columns: minmax(230px, 1.12fr) minmax(118px, 0.48fr);
+  min-height: 118px;
+  align-items: center;
 }
 
 .income-card > span,
@@ -323,7 +375,8 @@ tr:last-child td {
   padding: 0 !important;
   color: #174556 !important;
   background: transparent !important;
-  font-size: 16px !important;
+  font-family: inherit !important;
+  font-size: 18px !important;
   font-weight: 800 !important;
   line-height: 1.25 !important;
   white-space: normal !important;
@@ -333,14 +386,19 @@ tr:last-child td {
 }
 
 #probationSalaryCard .income-card-top {
-  align-items: flex-start;
+  align-items: center;
+}
+
+#probationSalaryCard .income-card-label-input {
+  min-height: 68px;
 }
 
 .money-field {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(86px, 132px) auto;
   gap: 8px;
   align-items: center;
+  justify-content: end;
   min-width: 0;
 }
 
@@ -375,18 +433,22 @@ tr:last-child td {
 
 .tiny-restore-button {
   justify-self: start;
-  min-height: 28px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  line-height: 1.1;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
 }
 
 .scenario-summary-row {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(160px, auto) 34px;
   gap: 12px;
-  align-items: center;
+  align-items: flex-start;
+  min-height: 96px;
   padding: 16px;
   border: 2px solid #a9ddff;
   border-radius: 18px;
@@ -395,14 +457,18 @@ tr:last-child td {
 
 .scenario-summary-label {
   width: 100%;
-  min-height: 42px;
+  min-height: 68px;
   border: 1px solid #b8dcff;
   border-radius: 12px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   color: #174556;
   background: #ffffff;
   font: inherit;
   font-weight: 800;
+  line-height: 1.25;
+  resize: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .scenario-summary-row strong {
@@ -690,6 +756,14 @@ tr:last-child td {
 }
 
 #conversionStandardsTable .standard-stage-to {
+  font-weight: 800;
+}
+
+#conversionStandardsTable .standard-stage-from,
+#conversionStandardsTable .standard-status,
+#incomeDynamicsTable .month-name,
+#incomeDynamicsTable .month-deals {
+  color: #174556;
   font-weight: 800;
 }
 

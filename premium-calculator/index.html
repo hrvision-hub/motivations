@@ -11,8 +11,11 @@
     <section class="page-header">
       <h1>📝 Калькулятор мотивации</h1>
       <label class="sales-plan">
-        <span>План продаж</span>
-        <input id="salesPlan" class="money-input" type="text" inputmode="numeric" placeholder="Введите сумму">
+        <span>🎯План продаж</span>
+        <span class="money-field sales-plan-money">
+          <input id="salesPlan" class="money-input" type="text" inputmode="numeric" placeholder="Введите сумму">
+          <span>₽</span>
+        </span>
       </label>
     </section>
 
@@ -42,7 +45,12 @@
               </tr>
               <tr>
                 <td>Средний чек</td>
-                <td><input id="averageCheck" class="money-input" type="text" inputmode="numeric"></td>
+                <td>
+                  <span class="money-field table-money-field">
+                    <input id="averageCheck" class="money-input" type="text" inputmode="numeric">
+                    <span>₽</span>
+                  </span>
+                </td>
               </tr>
               <tr>
                 <td>План состоявшихся сделок в месяц</td>
@@ -174,7 +182,7 @@
             </div>
             <span class="money-field"><input id="probationSalaryInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
           </div>
-          <button class="plus-button tiny-restore-button" type="button" id="showProbationSalary" hidden>Добавить оклад на ИС</button>
+          <button class="plus-button tiny-restore-button" type="button" id="showProbationSalary" aria-label="Добавить оклад на испытательный срок" title="Добавить оклад на ИС" hidden>+</button>
           <div class="income-card kpi-card" id="kpiCard">
             <div class="income-card-top">
               <span>KPI</span>
@@ -182,7 +190,7 @@
             </div>
             <span class="money-field"><input id="kpiInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
           </div>
-          <button class="plus-button tiny-restore-button restore-kpi-button" type="button" id="showKpi" hidden>Добавить KPI</button>
+          <button class="plus-button tiny-restore-button restore-kpi-button" type="button" id="showKpi" aria-label="Добавить KPI" title="Добавить KPI" hidden>+</button>
           <label class="income-card">
             <span>Премия в норме</span>
             <span class="money-field"><input id="normalPremiumInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
@@ -197,7 +205,7 @@
           </label>
         </div>
         <div class="scenario-summary-row" id="probationAverageCard">
-          <input id="probationAverageLabel" class="scenario-summary-label" type="text" value="Средний совокупный доход на Испытательный срок">
+          <textarea id="probationAverageLabel" class="scenario-summary-label" rows="2" aria-label="Название поля среднего дохода на испытательный срок">Средний совокупный доход на Испытательный срок</textarea>
           <strong id="probationAverageIncome">0 ₽</strong>
           <button class="icon-button remove-card-button" type="button" id="hideProbationAverage" aria-label="Убрать средний доход на испытательный срок">x</button>
         </div>

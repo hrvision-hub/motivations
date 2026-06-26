@@ -307,11 +307,11 @@ function updateNorms() {
 }
 
 function getKpiValue() {
-  return kpiCard.hidden ? 0 : toNumber(kpiInput.value);
+  return kpiCard.classList.contains("is-collapsed") ? 0 : toNumber(kpiInput.value);
 }
 
 function getProbationSalaryValue() {
-  return probationSalaryCard.hidden ? 0 : toNumber(probationSalaryInput.value);
+  return probationSalaryCard.classList.contains("is-collapsed") ? 0 : toNumber(probationSalaryInput.value);
 }
 
 function updateIncomeScenarios() {
@@ -1255,14 +1255,20 @@ function updateConversionStandardStatus(select) {
 }
 
 function toggleKpi(show) {
-  kpiCard.hidden = !show;
-  showKpiButton.hidden = show;
+  kpiCard.hidden = false;
+  kpiCard.classList.toggle("is-collapsed", !show);
+  hideKpiButton.textContent = show ? "x" : "+";
+  hideKpiButton.setAttribute("aria-label", show ? "Скрыть KPI" : "Показать KPI");
+  showKpiButton.hidden = true;
   updateIncomeScenarios();
 }
 
 function toggleProbationSalary(show) {
-  probationSalaryCard.hidden = !show;
-  showProbationSalaryButton.hidden = show;
+  probationSalaryCard.hidden = false;
+  probationSalaryCard.classList.toggle("is-collapsed", !show);
+  hideProbationSalaryButton.textContent = show ? "x" : "+";
+  hideProbationSalaryButton.setAttribute("aria-label", show ? "Скрыть оклад на испытательный срок" : "Показать оклад на испытательный срок");
+  showProbationSalaryButton.hidden = true;
   updateAllCalculations();
 }
 
@@ -1311,8 +1317,8 @@ function saveData() {
       topPremiumInput: topPremiumInput.value,
       targetIncomeInput: targetIncomeInput.value,
     },
-    kpiHidden: kpiCard.hidden,
-    probationSalaryHidden: probationSalaryCard.hidden,
+    kpiHidden: kpiCard.classList.contains("is-collapsed"),
+    probationSalaryHidden: probationSalaryCard.classList.contains("is-collapsed"),
     probationAverageHidden: probationAverageCard.hidden,
     incomeScenariosHidden: incomeContent.classList.contains("is-hidden"),
     incomeDynamicsHidden: incomeDynamicsContent.classList.contains("is-hidden"),
@@ -1406,8 +1412,7 @@ function restoreData() {
   }
 
   if (typeof data.probationSalaryHidden === "boolean") {
-    probationSalaryCard.hidden = data.probationSalaryHidden;
-    showProbationSalaryButton.hidden = !data.probationSalaryHidden;
+    toggleProbationSalary(!data.probationSalaryHidden);
   }
 
   if (typeof data.probationAverageHidden === "boolean") {
@@ -1688,14 +1693,14 @@ toggleConversionStandardsButton.addEventListener("click", () => {
 toggleIncomeDynamicsButton.addEventListener("click", switchIncomeDynamics);
 togglePaybackChartButton.addEventListener("click", switchPaybackChart);
 hideKpiButton.addEventListener("click", () => {
-  toggleKpi(false);
+  toggleKpi(kpiCard.classList.contains("is-collapsed"));
   updateAllCalculations();
 });
 showKpiButton.addEventListener("click", () => {
   toggleKpi(true);
   updateAllCalculations();
 });
-hideProbationSalaryButton.addEventListener("click", () => toggleProbationSalary(false));
+hideProbationSalaryButton.addEventListener("click", () => toggleProbationSalary(probationSalaryCard.classList.contains("is-collapsed")));
 showProbationSalaryButton.addEventListener("click", () => toggleProbationSalary(true));
 hideProbationAverageButton.addEventListener("click", () => {
   probationAverageCard.hidden = true;
