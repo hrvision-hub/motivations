@@ -1,10 +1,10 @@
 :root {
 
-    --bg: #ffffff;
+    --bg: #f3fbff;
 
-    --card: #f7fbff;
+    --card: #ecf8ff;
 
-    --card-hover: #eef7ff;
+    --card-hover: #dff2ff;
 
     --accent: #4da3ff;
 
@@ -14,11 +14,11 @@
 
     --danger: #ef4444;
 
-    --text: #1e3a5f;
+    --text: #173653;
 
-    --muted: #6b7f99;
+    --muted: #4f7193;
 
-    --border: #d7e7f7;
+    --border: #b9dffc;
 
 }
 
@@ -39,6 +39,10 @@ body {
     color: var(--text);
 
     padding: 40px;
+
+    font-size: 17px;
+
+    line-height: 1.45;
 
 }
 
@@ -70,17 +74,23 @@ h2 {
 
     border-radius: 24px;
 
-    padding: 24px;
+    padding: 28px;
 
-    margin-bottom: 24px;
+    margin-bottom: 26px;
 
-    box-shadow: 0 10px 30px rgba(77,163,255,.08);
+    box-shadow: 0 10px 30px rgba(77,163,255,.12);
 
 }
 
 .field-group {
 
-    margin-bottom: 20px;
+    margin-bottom: 22px;
+
+}
+
+.premium-block {
+
+    margin-top: 28px;
 
 }
 
@@ -88,11 +98,11 @@ label {
 
     display: block;
 
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 
     color: var(--muted);
 
-    font-size: 14px;
+    font-size: 16px;
 
 }
 
@@ -100,7 +110,7 @@ input {
 
     width: 100%;
 
-    padding: 14px;
+    padding: 16px;
 
     border-radius: 14px;
 
@@ -108,7 +118,7 @@ input {
 
     background: white;
 
-    font-size: 15px;
+    font-size: 17px;
 
 }
 
@@ -128,9 +138,9 @@ input:focus {
 
     border-radius: 18px;
 
-    padding: 18px;
+    padding: 20px;
 
-    margin-bottom: 15px;
+    margin-bottom: 17px;
 
     transition: .2s;
 
@@ -150,13 +160,15 @@ input:focus {
 
     align-items: center;
 
-    margin-bottom: 12px;
+    gap: 12px;
+
+    margin-bottom: 14px;
 
 }
 
 .kpi-title {
 
-    font-size: 13px;
+    font-size: 14px;
 
     color: var(--muted);
 
@@ -172,7 +184,7 @@ input:focus {
 
     grid-template-columns: 2fr 1fr;
 
-    gap: 12px;
+    gap: 14px;
 
 }
 
@@ -184,15 +196,25 @@ button {
 
     transition: .2s;
 
+    font-size: 16px;
+
+    line-height: 1.2;
+
 }
 
 .add-btn {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
 
     background: var(--accent);
 
     color: white;
 
-    padding: 12px 20px;
+    padding: 13px 22px;
 
     border-radius: 12px;
 
@@ -210,11 +232,13 @@ button {
 
     color: white;
 
-    width: 36px;
+    width: 38px;
 
-    height: 36px;
+    height: 38px;
 
     border-radius: 10px;
+
+    flex: 0 0 auto;
 
 }
 
@@ -236,7 +260,7 @@ button {
 
     color: var(--muted);
 
-    font-size: 13px;
+    font-size: 15px;
 
 }
 
@@ -256,7 +280,7 @@ button {
 
     flex-direction: column;
 
-    gap: 10px;
+    gap: 12px;
 
 }
 
@@ -266,9 +290,13 @@ button {
 
     justify-content: space-between;
 
+    align-items: center;
+
+    gap: 16px;
+
     background: white;
 
-    padding: 14px;
+    padding: 16px;
 
     border-radius: 12px;
 
@@ -276,13 +304,29 @@ button {
 
 }
 
+.income-row span {
+
+    min-width: 0;
+
+    overflow-wrap: anywhere;
+
+}
+
+.income-row strong {
+
+    flex: 0 0 auto;
+
+}
+
 .footer {
 
     display: flex;
 
-    gap: 10px;
+    flex-wrap: wrap;
 
-    margin-top: 20px;
+    gap: 12px;
+
+    margin-top: 22px;
 
 }
 
@@ -292,7 +336,7 @@ button {
 
     color: white;
 
-    padding: 12px 18px;
+    padding: 13px 20px;
 
     border-radius: 12px;
 
@@ -304,7 +348,7 @@ button {
 
     color: white;
 
-    padding: 12px 18px;
+    padding: 13px 20px;
 
     border-radius: 12px;
 
@@ -312,7 +356,7 @@ button {
 
 #linkPreview {
 
-    margin-top: 12px;
+    margin-top: 4px;
 
 }
 
@@ -322,6 +366,16 @@ button {
 
     text-decoration: none;
 
+    font-size: 18px;
+
+    font-weight: 600;
+
+}
+
+#linkPreview a:hover {
+
+    color: var(--accent-hover);
+
 }
 
 @media(max-width:768px){
@@ -330,11 +384,27 @@ button {
 
         padding:15px;
 
+        font-size:16px;
+
+    }
+
+    .card{
+
+        padding:22px;
+
     }
 
     .kpi-grid{
 
         grid-template-columns:1fr;
+
+    }
+
+    .income-row{
+
+        align-items:flex-start;
+
+        flex-direction:column;
 
     }
 

@@ -1,9 +1,56 @@
 const STORAGE_KEY = "salary_constructor_v2";
+const DEFAULT_PREMIUM_LINK = "https://lesookaya.github.io/-sales--/premium-calculator/";
+
+function parseMoney(value) {
+
+    return Number(
+        String(value)
+            .replace(/[^\d]/g, "")
+    ) || 0;
+
+}
 
 function formatMoney(value) {
 
     return Number(value).toLocaleString("ru-RU") + " ₽";
 
+}
+
+function formatMoneyInput(value) {
+
+    const number =
+        parseMoney(value);
+
+    if (!number) {
+
+        return "";
+
+    }
+
+    return formatMoney(number);
+
+}
+
+function formatMoneyField(input) {
+
+    input.value =
+        formatMoneyInput(input.value);
+
+}
+
+function handleInput(event) {
+
+    if (
+        event.target.classList.contains(
+            "money-input"
+        )
+    ) {
+
+        formatMoneyField(event.target);
+
+    }
+
+    calculateIncome();
 }
 
 function calculateIncome() {
@@ -13,9 +60,9 @@ function calculateIncome() {
     const breakdown = [];
 
     const salary =
-        Number(
+        parseMoney(
             document.getElementById("salary").value
-        ) || 0;
+        );
 
     total += salary;
 
@@ -33,9 +80,9 @@ function calculateIncome() {
                 "KPI";
 
             const value =
-                Number(
+                parseMoney(
                     card.querySelector(".kpi-value").value
-                ) || 0;
+                );
 
             total += value;
 
@@ -47,11 +94,11 @@ function calculateIncome() {
         });
 
     const premium =
-        Number(
+        parseMoney(
             document.getElementById(
                 "premiumAmount"
             ).value
-        ) || 0;
+        );
 
     total += premium;
 
@@ -98,7 +145,7 @@ function renderBreakdown(data) {
 
 }
 
-function addKPI(name = "", value = 0) {
+function addKPI(name = "", value = "") {
 
     const container =
         document.getElementById(
@@ -134,9 +181,10 @@ function addKPI(name = "", value = 0) {
             value="${name}">
 
             <input
-            class="kpi-value"
-            type="number"
-            value="${value}"
+            class="kpi-value money-input"
+            type="text"
+            inputmode="numeric"
+            value="${formatMoneyInput(value)}"
             placeholder="Сумма">
 
         </div>
@@ -160,23 +208,21 @@ function removeKPI(button) {
 
 function updateLinkPreview() {
 
-    const url =
+    const input =
         document.getElementById(
             "premiumLink"
-        ).value;
+        );
+
+    const url =
+        input.value ||
+        DEFAULT_PREMIUM_LINK;
 
     const block =
         document.getElementById(
             "linkPreview"
         );
 
-    if (!url) {
-
-        block.innerHTML = "";
-
-        return;
-
-    }
+    input.value = url;
 
     block.innerHTML = `
         <a href="${url}"
@@ -196,12 +242,12 @@ function attachEvents() {
 
             input.removeEventListener(
                 "input",
-                calculateIncome
+                handleInput
             );
 
             input.addEventListener(
                 "input",
-                calculateIncome
+                handleInput
             );
 
         });
@@ -213,19 +259,24 @@ function saveSettings() {
     const data = {
 
         salary:
-            document.getElementById(
-                "salary"
-            ).value,
+            parseMoney(
+                document.getElementById(
+                    "salary"
+                ).value
+            ),
 
         premium:
-            document.getElementById(
-                "premiumAmount"
-            ).value,
+            parseMoney(
+                document.getElementById(
+                    "premiumAmount"
+                ).value
+            ),
 
         link:
             document.getElementById(
                 "premiumLink"
-            ).value,
+            ).value ||
+            DEFAULT_PREMIUM_LINK,
 
         kpis: []
 
@@ -243,9 +294,11 @@ function saveSettings() {
                     ).value,
 
                 value:
-                    card.querySelector(
-                        ".kpi-value"
-                    ).value
+                    parseMoney(
+                        card.querySelector(
+                            ".kpi-value"
+                        ).value
+                    )
 
             });
 
@@ -289,17 +342,18 @@ function loadSettings() {
     document.getElementById(
         "salary"
     ).value =
-        data.salary;
+        formatMoneyInput(data.salary);
 
     document.getElementById(
         "premiumAmount"
     ).value =
-        data.premium;
+        formatMoneyInput(data.premium);
 
     document.getElementById(
         "premiumLink"
     ).value =
-        data.link;
+        data.link ||
+        DEFAULT_PREMIUM_LINK;
 
     data.kpis.forEach(kpi => {
 

@@ -21,12 +21,14 @@
 
         <div class="field-group">
 
-            <label>Оклад (₽)</label>
+            <label>Оклад</label>
 
             <input
-                type="number"
+                type="text"
                 id="salary"
-                value="120000"
+                class="money-input"
+                inputmode="numeric"
+                value="120 000 ₽"
                 placeholder="Введите оклад">
 
         </div>
@@ -48,9 +50,11 @@
             <label>Премия (₽)</label>
 
             <input
-                type="number"
+                type="text"
                 id="premiumAmount"
-                value="0"
+                class="money-input"
+                inputmode="numeric"
+                value=""
                 placeholder="Введите сумму премии">
 
         </div>
@@ -64,7 +68,7 @@
         <input
             type="hidden"
             id="premiumLink"
-            value="https://hrvision-hub.github.io/motivations/premium-calculator/">
+            value="https://lesookaya.github.io/-sales--/premium-calculator/">
 
         <div id="linkPreview"></div>
 
