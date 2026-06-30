@@ -64,7 +64,14 @@
       <div class="table-block">
         <div class="table-title-row">
           <h2>🔎Воронка</h2>
-          <button class="secondary-button" type="button" id="addFunnelRow">+ строка</button>
+          <div class="title-actions">
+            <div class="scenario-pills funnel-scenario-pills" aria-label="Сценарий воронки">
+              <button class="scenario-pill" type="button" data-funnel-scenario="below">Ниже нормы</button>
+              <button class="scenario-pill is-active" type="button" data-funnel-scenario="normal">Норма</button>
+              <button class="scenario-pill" type="button" data-funnel-scenario="above">Выше нормы</button>
+            </div>
+            <button class="secondary-button" type="button" id="addFunnelRow">+ строка</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table id="funnelTable">
@@ -237,6 +244,70 @@
       </div>
     </section>
 
+    <section class="table-block payroll-block">
+      <div class="table-title-row">
+        <h2>💼 Расчет ФОТ</h2>
+        <button class="secondary-button" type="button" id="togglePayrollTable">Скрыть</button>
+      </div>
+      <div class="table-wrap" id="payrollTableWrap">
+        <table id="payrollTable">
+          <thead>
+            <tr>
+              <th>Тип оформления</th>
+              <th>ЗП (до вычета)</th>
+              <th>ЗП (на руки)</th>
+              <th>НДФЛ</th>
+              <th>Страх. взнос</th>
+              <th>Травматизм</th>
+              <th>Сумма налогов</th>
+              <th>ФОТ</th>
+              <th>Выплата др. способом</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-payroll-row="employment">
+              <td>ТК, ГПХ</td>
+              <td data-payroll-field="gross">0 ₽</td>
+              <td data-payroll-field="net">0 ₽</td>
+              <td data-payroll-field="ndfl">0 ₽</td>
+              <td data-payroll-field="insurance">0 ₽</td>
+              <td data-payroll-field="injury">0 ₽</td>
+              <td data-payroll-field="taxes">0 ₽</td>
+              <td data-payroll-field="fot">0 ₽</td>
+              <td data-payroll-field="other">0 ₽</td>
+            </tr>
+            <tr data-payroll-row="self-employed">
+              <td>СМЗ, ИП</td>
+              <td data-payroll-field="gross">0 ₽</td>
+              <td data-payroll-field="net">0 ₽</td>
+              <td data-payroll-field="ndfl">0 ₽</td>
+              <td data-payroll-field="insurance">0 ₽</td>
+              <td data-payroll-field="injury">0 ₽</td>
+              <td data-payroll-field="taxes">0 ₽</td>
+              <td data-payroll-field="fot">0 ₽</td>
+              <td data-payroll-field="other">0 ₽</td>
+            </tr>
+            <tr data-payroll-row="minimum">
+              <td>ТК минималка</td>
+              <td>
+                <span class="money-field table-money-field">
+                  <input id="minimumGrossSalary" class="money-input payroll-min-input" type="text" inputmode="numeric" value="39 730">
+                  <span>₽</span>
+                </span>
+              </td>
+              <td data-payroll-field="net">0 ₽</td>
+              <td data-payroll-field="ndfl">0 ₽</td>
+              <td data-payroll-field="insurance">0 ₽</td>
+              <td data-payroll-field="injury">0 ₽</td>
+              <td data-payroll-field="taxes">0 ₽</td>
+              <td data-payroll-field="fot">0 ₽</td>
+              <td data-payroll-field="other">0 ₽</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="income-path-section">
       <button class="income-path-toggle" type="button" id="toggleIncomePath">🚀 Показать путь к доходу</button>
       <div class="income-path-card is-hidden" id="incomePathCard">
@@ -405,6 +476,11 @@
       <div class="table-title-row">
         <h2>📊Нормативы конверсий</h2>
         <div class="title-actions">
+          <div class="scenario-pills standards-scenario-pills" aria-label="Сценарий нормативов конверсий">
+            <button class="scenario-pill" type="button" data-standards-scenario="below">Ниже нормы</button>
+            <button class="scenario-pill is-active" type="button" data-standards-scenario="normal">Норма</button>
+            <button class="scenario-pill" type="button" data-standards-scenario="above">Выше нормы</button>
+          </div>
           <button class="secondary-button" type="button" id="toggleConversionStandards">Скрыть</button>
           <button class="secondary-button" type="button" id="addConversionStandardRow">+ строка</button>
         </div>
@@ -415,7 +491,7 @@
             <tr>
               <th>Из стадии</th>
               <th>В стадию</th>
-              <th>%</th>
+              <th>Норматив конверсии (%)</th>
               <th>Статус</th>
             </tr>
           </thead>

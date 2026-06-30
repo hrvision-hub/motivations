@@ -37,6 +37,9 @@ const calculationTable = document.querySelector("#calculationTable");
 const conversionStandardsTable = document.querySelector("#conversionStandardsTable");
 const incomeDynamicsTable = document.querySelector("#incomeDynamicsTable");
 const incomeDynamicsContent = document.querySelector("#incomeDynamicsContent");
+const payrollTable = document.querySelector("#payrollTable");
+const payrollTableWrap = document.querySelector("#payrollTableWrap");
+const minimumGrossSalaryInput = document.querySelector("#minimumGrossSalary");
 const calculationTableWrap = calculationTable.closest(".table-wrap");
 const conversionStandardsWrap = conversionStandardsTable.closest(".table-wrap");
 const paybackBlock = document.querySelector("#paybackBlock");
@@ -49,6 +52,7 @@ const addCalculationRowButton = document.querySelector("#addCalculationRow");
 const addConversionStandardRowButton = document.querySelector("#addConversionStandardRow");
 const toggleIncomeScenariosButton = document.querySelector("#toggleIncomeScenarios");
 const toggleCalculationTableButton = document.querySelector("#toggleCalculationTable");
+const togglePayrollTableButton = document.querySelector("#togglePayrollTable");
 const toggleConversionStandardsButton = document.querySelector("#toggleConversionStandards");
 const toggleIncomeDynamicsButton = document.querySelector("#toggleIncomeDynamics");
 const togglePaybackChartButton = document.querySelector("#togglePaybackChart");
@@ -57,9 +61,16 @@ const saveStatus = document.querySelector("#saveStatus");
 const toggleSaveHistoryButton = document.querySelector("#toggleSaveHistory");
 const saveHistoryPanel = document.querySelector("#saveHistoryPanel");
 const saveHistoryList = document.querySelector("#saveHistoryList");
+const standardsScenarioButtons = document.querySelectorAll("[data-standards-scenario]");
+const funnelScenarioButtons = document.querySelectorAll("[data-funnel-scenario]");
 const STORAGE_KEY = "premiumCalculatorData";
 const HISTORY_KEY = "premiumCalculatorHistory";
 const MAX_HISTORY_ITEMS = 20;
+const STANDARD_SCENARIOS = {
+  below: "Ниже нормы",
+  normal: "Норма",
+  above: "Выше нормы",
+};
 const STAGE_OPTIONS = [
   "Лид взят в работу",
   "Лид ответил",
@@ -71,6 +82,13 @@ const STAGE_OPTIONS = [
 let incomeDynamicsChart;
 let paybackChart;
 let xlsxLoadingPromise;
+let activeStandardScenario = "normal";
+let activeFunnelScenario = "normal";
+let standardScenarioValues = {
+  below: {},
+  normal: {},
+  above: {},
+};
 const currencyLabelsPlugin = {
   id: "currencyLabels",
   afterDatasetsDraw(chart) {
@@ -257,6 +275,8 @@ function getManagerPercent(planPercent) {
 function updateFunnelConversions() {
   const rows = Array.from(funnelTable.querySelectorAll("tbody tr"));
 
+  persistCurrentStandardScenario();
+
   rows.forEach((row) => {
     const actionCell = row.querySelector("td:last-child");
 
@@ -273,14 +293,25 @@ function updateFunnelConversions() {
 
   rows.forEach((row, index) => {
     const conversionCell = row.querySelector(".conversion");
-    const currentValue = Number(row.querySelector(".funnel-value").value);
+    const currentInput = row.querySelector(".funnel-value");
+    let currentValue = toNumber(currentInput.value);
 
     if (index === 0) {
       conversionCell.textContent = "-";
       return;
     }
 
-    const previousValue = Number(rows[index - 1].querySelector(".funnel-value").value);
+    const previousRow = rows[index - 1];
+    const previousValue = toNumber(previousRow.querySelector(".funnel-value").value);
+    const previousStage = previousRow.querySelector("td:first-child input")?.value || "";
+    const currentStage = row.querySelector("td:first-child input")?.value || "";
+    const scenarioConversion = getStandardPercentForPair(previousStage, currentStage, activeFunnelScenario);
+
+    if (Number.isFinite(scenarioConversion)) {
+      currentValue = previousValue * (scenarioConversion / 100);
+      currentInput.value = getFormattedFunnelValue(currentValue);
+    }
+
     const conversion = previousValue > 0 ? (currentValue / previousValue) * 100 : NaN;
 
     conversionCell.textContent = formatPercent(conversion);
@@ -329,6 +360,75 @@ function updateIncomeScenarios() {
   normalIncome.textContent = formatCurrency(salary + kpi + normalPremium);
   strongIncome.textContent = formatCurrency(salary + kpi + toNumber(strongPremiumInput.value));
   topIncome.textContent = formatCurrency(salary + kpi + toNumber(topPremiumInput.value));
+}
+
+function setPayrollRowValues(rowType, values) {
+  const row = payrollTable.querySelector(`[data-payroll-row="${rowType}"]`);
+
+  if (!row) {
+    return;
+  }
+
+  Object.entries(values).forEach(([field, value]) => {
+    const cell = row.querySelector(`[data-payroll-field="${field}"]`);
+
+    if (cell) {
+      cell.textContent = formatCurrency(Math.round(value || 0));
+    }
+  });
+}
+
+function updatePayrollTable() {
+  if (!payrollTable) {
+    return;
+  }
+
+  const normalManagerIncome = toNumber(salaryInput.value) + getKpiValue() + toNumber(normalPremiumInput.value);
+  const employmentGross = normalManagerIncome / 0.87;
+  const employmentNdfl = employmentGross * 0.13;
+  const employmentInsurance = employmentGross * 0.30;
+  const employmentInjury = employmentGross * 0.002;
+  const employmentTaxes = employmentNdfl + employmentInsurance + employmentInjury;
+  const selfEmployedGross = normalManagerIncome / 0.94;
+  const selfEmployedTaxes = selfEmployedGross - normalManagerIncome;
+  const minimumGross = toNumber(minimumGrossSalaryInput.value);
+  const minimumNet = minimumGross * 0.87;
+  const minimumNdfl = minimumGross * 0.13;
+  const minimumInsurance = minimumGross * 0.30;
+  const minimumInjury = minimumGross * 0.002;
+  const minimumTaxes = minimumNdfl + minimumInsurance + minimumInjury;
+
+  setPayrollRowValues("employment", {
+    gross: employmentGross,
+    net: normalManagerIncome,
+    ndfl: employmentNdfl,
+    insurance: employmentInsurance,
+    injury: employmentInjury,
+    taxes: employmentTaxes,
+    fot: normalManagerIncome + employmentTaxes,
+    other: 0,
+  });
+
+  setPayrollRowValues("self-employed", {
+    gross: selfEmployedGross,
+    net: normalManagerIncome,
+    ndfl: 0,
+    insurance: 0,
+    injury: 0,
+    taxes: selfEmployedTaxes,
+    fot: selfEmployedGross,
+    other: 0,
+  });
+
+  setPayrollRowValues("minimum", {
+    net: minimumNet,
+    ndfl: minimumNdfl,
+    insurance: minimumInsurance,
+    injury: minimumInjury,
+    taxes: minimumTaxes,
+    fot: minimumNet + minimumTaxes,
+    other: normalManagerIncome - minimumNet,
+  });
 }
 
 function getPremiumForDeals(deals) {
@@ -681,14 +781,35 @@ function createBonusRow(from = "", to = "", percent = "") {
 }
 
 function getStandardLabel(status) {
-  const labels = {
-    below: "Ниже нормы",
-    normal: "Норма",
-    good: "Хорошо",
-    excellent: "Отлично",
-  };
+  return STANDARD_SCENARIOS[status] || STANDARD_SCENARIOS.normal;
+}
 
-  return labels[status] || labels.normal;
+function normalizeScenarioKey(status) {
+  if (status === "good" || status === "excellent") {
+    return "above";
+  }
+
+  return STANDARD_SCENARIOS[status] ? status : "normal";
+}
+
+function getStandardKey(from, to) {
+  return `${String(from || "").trim()}|||${String(to || "").trim()}`;
+}
+
+function getFormattedFunnelValue(value) {
+  if (!Number.isFinite(value)) {
+    return "";
+  }
+
+  const rounded = Number(value.toFixed(2));
+
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
+function setScenarioButtons(buttons, activeScenario) {
+  buttons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.standardsScenario === activeScenario || button.dataset.funnelScenario === activeScenario);
+  });
 }
 
 function createStageOptions(selectedValue = "") {
@@ -710,30 +831,140 @@ function updateConversionStageSelects() {
   });
 }
 
+function getConversionStandardRows() {
+  return Array.from(conversionStandardsTable.querySelectorAll("tbody tr"));
+}
+
+function persistCurrentStandardScenario() {
+  getConversionStandardRows().forEach((row) => {
+    const from = row.querySelector(".standard-stage-from")?.value || "";
+    const to = row.querySelector(".standard-stage-to")?.value || "";
+    const percent = row.querySelector(".standard-percent")?.value || "";
+    const key = getStandardKey(from, to);
+
+    if (key !== "|||") {
+      standardScenarioValues[activeStandardScenario][key] = percent;
+    }
+  });
+}
+
+function updateStandardStatusDisplay() {
+  getConversionStandardRows().forEach((row) => {
+    let statusCell = row.querySelector(".standard-status");
+
+    row.dataset.status = activeStandardScenario;
+
+    if (!statusCell || statusCell.tagName === "SELECT") {
+      const actions = row.querySelector(".status-actions");
+
+      if (actions) {
+        actions.innerHTML = `
+          <span class="standard-status">${getStandardLabel(activeStandardScenario)}</span>
+          <button class="icon-button remove-standard-row" type="button" aria-label="Удалить строку">x</button>
+        `;
+      }
+    } else {
+      statusCell.textContent = getStandardLabel(activeStandardScenario);
+    }
+  });
+}
+
+function applyStandardScenarioValues() {
+  getConversionStandardRows().forEach((row) => {
+    const from = row.querySelector(".standard-stage-from")?.value || "";
+    const to = row.querySelector(".standard-stage-to")?.value || "";
+    const percentInput = row.querySelector(".standard-percent");
+    const key = getStandardKey(from, to);
+
+    if (percentInput) {
+      percentInput.value = standardScenarioValues[activeStandardScenario][key] ?? "";
+    }
+  });
+
+  updateStandardStatusDisplay();
+  setScenarioButtons(standardsScenarioButtons, activeStandardScenario);
+}
+
+function getStandardPercentForPair(from, to, scenario = activeFunnelScenario) {
+  const key = getStandardKey(from, to);
+  let value = standardScenarioValues[scenario]?.[key];
+
+  if (scenario === activeStandardScenario) {
+    const row = getConversionStandardRows().find((item) => (
+      getStandardKey(
+        item.querySelector(".standard-stage-from")?.value || "",
+        item.querySelector(".standard-stage-to")?.value || ""
+      ) === key
+    ));
+
+    value = row?.querySelector(".standard-percent")?.value ?? value;
+  }
+
+  const percent = toNumber(value);
+
+  return Number.isFinite(percent) ? percent : NaN;
+}
+
+function setActiveStandardScenario(scenario) {
+  const nextScenario = normalizeScenarioKey(scenario);
+
+  persistCurrentStandardScenario();
+  activeStandardScenario = nextScenario;
+  applyStandardScenarioValues();
+  updateAllCalculations();
+}
+
+function setActiveFunnelScenario(scenario) {
+  activeFunnelScenario = normalizeScenarioKey(scenario);
+  setScenarioButtons(funnelScenarioButtons, activeFunnelScenario);
+  updateAllCalculations();
+}
+
+function initializeStandardScenarioValues() {
+  getConversionStandardRows().forEach((row) => {
+    const from = row.querySelector(".standard-stage-from")?.value || "";
+    const to = row.querySelector(".standard-stage-to")?.value || "";
+    const percent = row.querySelector(".standard-percent")?.value || "";
+    const status = normalizeScenarioKey(row.querySelector(".standard-status")?.value || row.dataset.status || "normal");
+    const key = getStandardKey(from, to);
+
+    if (key === "|||") {
+      return;
+    }
+
+    Object.keys(STANDARD_SCENARIOS).forEach((scenario) => {
+      if (standardScenarioValues[scenario][key] === undefined) {
+        standardScenarioValues[scenario][key] = percent;
+      }
+    });
+
+    standardScenarioValues[status][key] = percent;
+  });
+
+  applyStandardScenarioValues();
+  setScenarioButtons(funnelScenarioButtons, activeFunnelScenario);
+}
+
 function createConversionStandardRow(from = "", to = "", percent = "", status = "normal") {
   const row = document.createElement("tr");
-  const statuses = ["below", "normal", "good", "excellent"];
+  const scenario = normalizeScenarioKey(status);
 
-  row.dataset.status = status;
+  row.dataset.status = scenario;
   row.innerHTML = `
     <td><select class="standard-stage-from">${createStageOptions(from)}</select></td>
     <td><select class="standard-stage-to">${createStageOptions(to)}</select></td>
     <td class="percent-cell"><input class="standard-percent" type="number" min="0" max="100" step="0.1"></td>
     <td>
       <div class="status-actions">
-        <select class="standard-status">
-          ${statuses.map((item) => `<option value="${item}">${getStandardLabel(item)}</option>`).join("")}
-        </select>
+        <span class="standard-status">${getStandardLabel(scenario)}</span>
         <button class="icon-button remove-standard-row" type="button" aria-label="Удалить строку">x</button>
       </div>
     </td>
   `;
 
   const inputs = row.querySelectorAll("input");
-  const statusSelect = row.querySelector(".standard-status");
 
   inputs[0].value = percent;
-  statusSelect.value = status;
 
   return row;
 }
@@ -1171,10 +1402,11 @@ function updateAnalyticsBlocks() {
 }
 
 function updateAllCalculations() {
-  updateFunnelConversions();
   updateConversionStageSelects();
+  updateFunnelConversions();
   updateNorms();
   updateIncomeScenarios();
+  updatePayrollTable();
   applyBonusRowClasses();
   updateCalculationTable();
   updateIncomePath();
@@ -1242,7 +1474,10 @@ function removeBonusRow(button) {
 }
 
 function addConversionStandardRow() {
-  conversionStandardsTable.querySelector("tbody").append(createConversionStandardRow("", "", "", "excellent"));
+  persistCurrentStandardScenario();
+  conversionStandardsTable.querySelector("tbody").append(createConversionStandardRow("", "", "", activeStandardScenario));
+  updateConversionStageSelects();
+  applyStandardScenarioValues();
 }
 
 function removeConversionStandardRow(button) {
@@ -1253,10 +1488,15 @@ function removeConversionStandardRow(button) {
   }
 
   button.closest("tr").remove();
+  persistCurrentStandardScenario();
 }
 
 function updateConversionStandardStatus(select) {
-  select.closest("tr").dataset.status = select.value;
+  const row = select.closest("tr");
+
+  if (row) {
+    row.dataset.status = activeStandardScenario;
+  }
 }
 
 function toggleKpi(show) {
@@ -1282,6 +1522,15 @@ function toggleTableVisibility(target, button, show) {
   button.textContent = show ? "Скрыть" : "Показать";
 }
 
+function moveConversionStandardsBlock() {
+  const standardsBlock = conversionStandardsTable.closest(".conversion-standards-block");
+  const bonusBlock = bonusTable.closest(".bonus-block");
+
+  if (standardsBlock && bonusBlock && standardsBlock.nextElementSibling !== bonusBlock) {
+    bonusBlock.before(standardsBlock);
+  }
+}
+
 function switchTableVisibility(target, button) {
   toggleTableVisibility(target, button, target.classList.contains("is-hidden"));
 }
@@ -1305,6 +1554,8 @@ function clampBonusPercent(input) {
 }
 
 function collectCurrentData() {
+  persistCurrentStandardScenario();
+
   return {
     simpleInputs: {
       salesPlan: salesPlanInput.value,
@@ -1321,6 +1572,7 @@ function collectCurrentData() {
       strongPremiumInput: strongPremiumInput.value,
       topPremiumInput: topPremiumInput.value,
       targetIncomeInput: targetIncomeInput.value,
+      minimumGrossSalary: minimumGrossSalaryInput.value,
     },
     kpiHidden: kpiCard.classList.contains("is-collapsed"),
     probationSalaryHidden: probationSalaryCard.classList.contains("is-collapsed"),
@@ -1328,9 +1580,13 @@ function collectCurrentData() {
     incomeScenariosHidden: incomeContent.classList.contains("is-hidden"),
     incomeDynamicsHidden: incomeDynamicsContent.classList.contains("is-hidden"),
     incomePathHidden: incomePathCard.classList.contains("is-hidden"),
+    payrollHidden: payrollTableWrap.classList.contains("is-hidden"),
     calculationHidden: calculationTableWrap.classList.contains("is-hidden"),
     conversionStandardsHidden: conversionStandardsWrap.classList.contains("is-hidden"),
     paybackChartHidden: paybackBlock.classList.contains("is-collapsed"),
+    activeStandardScenario,
+    activeFunnelScenario,
+    standardScenarioValues,
     funnelRows: Array.from(funnelTable.querySelectorAll("tbody tr")).map((row) => {
       const inputs = row.querySelectorAll("input");
 
@@ -1358,7 +1614,12 @@ function collectCurrentData() {
         from: fromSelect?.value || "",
         to: toSelect?.value || "",
         percent: percentInput?.value || "",
-        status: statusSelect?.value || "normal",
+        status: normalizeScenarioKey(statusSelect?.value || row.dataset.status || activeStandardScenario),
+        scenarios: {
+          below: standardScenarioValues.below[getStandardKey(fromSelect?.value || "", toSelect?.value || "")] || "",
+          normal: standardScenarioValues.normal[getStandardKey(fromSelect?.value || "", toSelect?.value || "")] || "",
+          above: standardScenarioValues.above[getStandardKey(fromSelect?.value || "", toSelect?.value || "")] || "",
+        },
       };
     }),
     incomeDynamicsRows: Array.from(incomeDynamicsTable.querySelectorAll("tbody tr")).map((row) => ({
@@ -1499,6 +1760,10 @@ function applySavedData(data) {
     toggleIncomePathButton.textContent = data.incomePathHidden ? "🚀 Показать путь к доходу" : "Скрыть";
   }
 
+  if (typeof data.payrollHidden === "boolean") {
+    toggleTableVisibility(payrollTableWrap, togglePayrollTableButton, !data.payrollHidden);
+  }
+
   if (typeof data.calculationHidden === "boolean") {
     toggleTableVisibility(calculationTableWrap, toggleCalculationTableButton, !data.calculationHidden);
   }
@@ -1539,16 +1804,44 @@ function applySavedData(data) {
 
   if (Array.isArray(data.conversionStandardRows) && data.conversionStandardRows.length) {
     standardsBody.innerHTML = "";
+    standardScenarioValues = {
+      below: {},
+      normal: {},
+      above: {},
+    };
 
     data.conversionStandardRows.forEach((item) => {
+      const from = item.from || "";
+      const to = item.to || "";
+      const key = getStandardKey(from, to);
+      const scenarios = item.scenarios || {};
+      const fallbackPercent = item.percent || item.currentPercent || item.standardPercent || "";
+
+      Object.keys(STANDARD_SCENARIOS).forEach((scenario) => {
+        standardScenarioValues[scenario][key] = scenarios[scenario] ?? fallbackPercent;
+      });
+
       standardsBody.append(createConversionStandardRow(
-        item.from,
-        item.to,
-        item.percent || item.currentPercent || item.standardPercent || "",
-        item.status
+        from,
+        to,
+        standardScenarioValues[normalizeScenarioKey(data.activeStandardScenario || item.status)][key] || fallbackPercent,
+        normalizeScenarioKey(data.activeStandardScenario || item.status)
       ));
     });
   }
+
+  if (data.standardScenarioValues) {
+    standardScenarioValues = {
+      below: { ...(data.standardScenarioValues.below || {}) },
+      normal: { ...(data.standardScenarioValues.normal || {}) },
+      above: { ...(data.standardScenarioValues.above || {}) },
+    };
+  }
+
+  activeStandardScenario = normalizeScenarioKey(data.activeStandardScenario || activeStandardScenario);
+  activeFunnelScenario = normalizeScenarioKey(data.activeFunnelScenario || activeFunnelScenario);
+  applyStandardScenarioValues();
+  setScenarioButtons(funnelScenarioButtons, activeFunnelScenario);
 
   if (Array.isArray(data.incomeDynamicsRows) && data.incomeDynamicsRows.length) {
     incomeDynamicsTable.querySelector("tbody").innerHTML = "";
@@ -1696,6 +1989,7 @@ async function exportToExcel() {
     [],
     ...tableToRows("Итоговые сценарии", document.querySelector("#incomeScenariosTable")),
   ]);
+  addSheet(workbook, "Расчет ФОТ", tableToRows("Расчет ФОТ", document.querySelector("#payrollTable")));
   addSheet(workbook, "Расчет премии", tableToRows("Расчет премии", document.querySelector("#calculationTable")));
   addSheet(workbook, "Нормативы конверсий", tableToRows("Нормативы конверсий", document.querySelector("#conversionStandardsTable")));
   addSheet(workbook, "Динамика дохода", [
@@ -1780,6 +2074,10 @@ conversionStandardsTable.addEventListener("change", (event) => {
     updateConversionStandardStatus(event.target);
   }
 
+  if (event.target.classList.contains("standard-stage-from") || event.target.classList.contains("standard-stage-to")) {
+    persistCurrentStandardScenario();
+  }
+
   updateAllCalculations();
 });
 
@@ -1791,6 +2089,9 @@ toggleIncomeScenariosButton.addEventListener("click", () => {
   switchTableVisibility(incomeContent, toggleIncomeScenariosButton);
 });
 toggleIncomePathButton.addEventListener("click", switchIncomePath);
+togglePayrollTableButton.addEventListener("click", () => {
+  switchTableVisibility(payrollTableWrap, togglePayrollTableButton);
+});
 toggleCalculationTableButton.addEventListener("click", () => {
   switchTableVisibility(calculationTableWrap, toggleCalculationTableButton);
 });
@@ -1799,6 +2100,12 @@ toggleConversionStandardsButton.addEventListener("click", () => {
 });
 toggleIncomeDynamicsButton.addEventListener("click", switchIncomeDynamics);
 togglePaybackChartButton.addEventListener("click", switchPaybackChart);
+standardsScenarioButtons.forEach((button) => {
+  button.addEventListener("click", () => setActiveStandardScenario(button.dataset.standardsScenario));
+});
+funnelScenarioButtons.forEach((button) => {
+  button.addEventListener("click", () => setActiveFunnelScenario(button.dataset.funnelScenario));
+});
 hideKpiButton.addEventListener("click", () => {
   toggleKpi(kpiCard.classList.contains("is-collapsed"));
   updateAllCalculations();
@@ -1827,6 +2134,8 @@ saveHistoryList.addEventListener("click", (event) => {
     restoreHistoryEntry(event.target.dataset.historyId);
   }
 });
+moveConversionStandardsBlock();
+initializeStandardScenarioValues();
 restoreData();
 renderSaveHistory();
 formatMoneyInputs();

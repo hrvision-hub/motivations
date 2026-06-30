@@ -220,6 +220,40 @@ tr:last-child td {
   background: var(--accent-dark);
 }
 
+.title-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.scenario-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scenario-pill {
+  min-height: 32px;
+  border: 1px solid #b9dfd5;
+  border-radius: 999px;
+  padding: 6px 11px;
+  color: #174556;
+  background: #f7fffb;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.scenario-pill:hover,
+.scenario-pill.is-active {
+  color: #ffffff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 .icon-button {
   width: 34px;
   height: 34px;
@@ -262,6 +296,7 @@ tr:last-child td {
 
 .bonus-block,
 .income-scenarios-block,
+.payroll-block,
 .calculation-block,
 .conversion-standards-block,
 .income-dynamics-block,
@@ -606,6 +641,57 @@ tr:last-child td {
   background: #dcf8e8;
 }
 
+.payroll-block {
+  border-color: #a9ddff;
+}
+
+#payrollTable {
+  min-width: 1080px;
+  table-layout: fixed;
+}
+
+#payrollTable th {
+  color: #174556;
+  background: #e8fff5;
+  font-size: 15px;
+}
+
+#payrollTable td {
+  color: #174556;
+  font-size: 15px;
+  font-weight: 750;
+  text-align: right;
+  vertical-align: middle;
+  background: #fbfffd;
+}
+
+#payrollTable td:first-child {
+  text-align: left;
+  font-weight: 850;
+  background: #f2fbff;
+}
+
+#payrollTable tr:nth-child(even) td {
+  background: #f7fcff;
+}
+
+#payrollTable tr:nth-child(even) td:first-child {
+  background: #eef8ff;
+}
+
+#payrollTable .table-money-field {
+  max-width: 150px;
+  margin-left: auto;
+}
+
+#payrollTable .payroll-min-input {
+  min-height: 40px;
+  border: 2px solid #8ddfc2;
+  border-radius: 12px;
+  font-weight: 850;
+  text-align: right;
+}
+
 .bonus-low td {
   background: #ffdada;
 }
@@ -648,19 +734,15 @@ tr:last-child td {
 }
 
 #conversionStandardsTable tr[data-status="below"] td {
-  background: #ffdada;
+  background: #FEECEC;
 }
 
 #conversionStandardsTable tr[data-status="normal"] td {
-  background: #fff0c9;
+  background: #F4F9E8;
 }
 
-#conversionStandardsTable tr[data-status="good"] td {
-  background: #dff1ff;
-}
-
-#conversionStandardsTable tr[data-status="excellent"] td {
-  background: #d9f9e7;
+#conversionStandardsTable tr[data-status="above"] td {
+  background: #E6F7F4;
 }
 
 .analytics-content {
