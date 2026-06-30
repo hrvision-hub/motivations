@@ -152,6 +152,7 @@ td select:focus {
 .table-wrap {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .wide-table-wrap {
@@ -300,6 +301,8 @@ tr:last-child td {
 .calculation-block,
 .conversion-standards-block,
 .income-dynamics-block,
+.profitability-block,
+.sales-cost-block,
 .payback-block {
   margin-top: 24px;
 }
@@ -310,14 +313,13 @@ tr:last-child td {
   gap: 22px;
   padding: 20px;
   align-items: start;
+  position: relative;
 }
 
 .income-content > .income-cards {
   grid-row: 1 / span 3;
 }
 
-.income-content > .scenario-summary-row,
-.income-content > #showProbationAverage,
 .income-content > .table-wrap {
   grid-column: 2;
 }
@@ -476,40 +478,6 @@ tr:last-child td {
   border-radius: 50%;
   font-size: 20px;
   line-height: 1;
-}
-
-.scenario-summary-row {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(160px, auto) 34px;
-  gap: 12px;
-  align-items: flex-start;
-  min-height: 96px;
-  padding: 16px;
-  border: 2px solid #a9ddff;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #eef7ff, #e9fbf5);
-}
-
-.scenario-summary-label {
-  width: 100%;
-  min-height: 68px;
-  border: 1px solid #b8dcff;
-  border-radius: 12px;
-  padding: 10px 12px;
-  color: #174556;
-  background: #ffffff;
-  font: inherit;
-  font-weight: 800;
-  line-height: 1.25;
-  resize: none;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.scenario-summary-row strong {
-  color: var(--accent-dark);
-  font-size: 22px;
-  white-space: nowrap;
 }
 
 .income-path-section {
@@ -765,6 +733,16 @@ tr:last-child td {
   max-height: 300px;
 }
 
+.profitability-block .chart-card {
+  min-height: 430px;
+  padding-top: 28px;
+}
+
+.profitability-block #profitabilityChart {
+  height: 380px !important;
+  max-height: 380px;
+}
+
 .fallback-chart {
   display: grid;
   gap: 12px;
@@ -806,6 +784,138 @@ tr:last-child td {
 #incomeDynamicsTable td:last-child {
   color: var(--accent-dark);
   font-weight: 800;
+}
+
+.profitability-revenue-field {
+  display: grid;
+  grid-template-columns: auto minmax(150px, 190px);
+  gap: 10px;
+  align-items: center;
+  color: #174556;
+  font-weight: 800;
+}
+
+.profitability-table-wrap {
+  overflow-x: auto;
+}
+
+#profitabilityTable {
+  min-width: 1900px;
+  table-layout: fixed;
+}
+
+#profitabilityTable th,
+#profitabilityTable td {
+  min-width: 130px;
+  padding: 10px 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+#profitabilityTable th:first-child,
+#profitabilityTable td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 260px;
+  width: 260px;
+  text-align: left;
+  color: #174556;
+  background: #eef8ff;
+  font-weight: 850;
+}
+
+#profitabilityTable th:first-child {
+  z-index: 2;
+  background: #dff3ff;
+}
+
+#profitabilityTable tr[data-profitability-row="premium"] td,
+#profitabilityTable tr[data-profitability-row="sales"] td {
+  background: #fbfffd;
+}
+
+#profitabilityTable input {
+  min-height: 38px;
+  border: 2px solid #b8dcff;
+  border-radius: 12px;
+  color: #174556;
+  background: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  text-align: center;
+}
+
+#profitabilityTable .profitability-money-input {
+  min-width: 0;
+}
+
+#profitabilityTable .profitability-sales-input {
+  width: 100%;
+}
+
+#profitabilityTable tr[data-profitability-row="fot"] td,
+#profitabilityTable tr[data-profitability-row="revenue"] td,
+#profitabilityTable tr[data-profitability-row="difference"] td {
+  color: var(--accent-dark);
+  font-weight: 850;
+}
+
+#profitabilityTable tr[data-profitability-row="revenue"] td:not(:first-child),
+#profitabilityTable tr[data-profitability-row="difference"] td:not(:first-child) {
+  white-space: nowrap;
+}
+
+.profitability-summary {
+  margin-top: 0;
+}
+
+.sales-cost-table-wrap {
+  overflow-x: auto;
+}
+
+#salesCostTable {
+  min-width: 1760px;
+  table-layout: fixed;
+}
+
+#salesCostTable td {
+  min-width: 115px;
+  width: 115px;
+  padding: 11px 9px;
+  text-align: center;
+  color: #174556;
+  font-weight: 800;
+}
+
+#salesCostTable td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 380px;
+  width: 380px;
+  text-align: left;
+  line-height: 1.25;
+  background: #eef8ff;
+}
+
+#salesCostTable tr[data-sales-cost-row="sale-cost"] td:not(:first-child) {
+  color: #1d4ed8;
+  background: #eef5ff;
+}
+
+#salesCostTable tr[data-sales-cost-row="profitability"] td:not(:first-child) {
+  color: #c05621;
+  background: #fff7ed;
+}
+
+.sales-cost-chart-card {
+  min-height: 390px;
+}
+
+.sales-cost-block #salesCostChart {
+  height: 340px !important;
+  max-height: 340px;
 }
 
 .payback-summary {
@@ -1128,11 +1238,17 @@ tr:last-child td {
   }
 
   .income-content > .income-cards,
-  .income-content > .scenario-summary-row,
-  .income-content > #showProbationAverage,
   .income-content > .table-wrap {
     grid-column: auto;
     grid-row: auto;
+  }
+
+  .table-wrap,
+  .profitability-table-wrap,
+  .sales-cost-table-wrap,
+  .wide-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
   }
 
   #calculationTable {
@@ -1141,18 +1257,59 @@ tr:last-child td {
 }
 
 @media (max-width: 560px) {
+  body {
+    font-size: 15px;
+  }
+
   .page {
     width: min(100% - 20px, 1180px);
     padding: 24px 0;
   }
 
+  .page-header {
+    gap: 18px;
+    padding: 22px;
+    border-radius: 14px;
+  }
+
+  h1 {
+    font-size: 30px;
+  }
+
+  h2 {
+    font-size: 20px;
+  }
+
+  .sales-plan {
+    width: 100%;
+  }
+
+  .table-block {
+    border-radius: 12px;
+  }
+
   .table-title-row {
     align-items: start;
     flex-direction: column;
+    padding: 16px;
   }
 
   th,
   td {
     padding: 10px;
+  }
+
+  #salesCostTable {
+    min-width: 1760px;
+  }
+
+  #salesCostTable td:first-child {
+    min-width: 360px;
+    width: 360px;
+  }
+
+  .chart-card,
+  .sales-cost-chart-card {
+    min-height: 360px;
   }
 }

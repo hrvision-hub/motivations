@@ -211,12 +211,6 @@
             <span class="money-field"><input id="topPremiumInput" class="money-input" type="text" inputmode="numeric" placeholder="0"><span>₽</span></span>
           </label>
         </div>
-        <div class="scenario-summary-row" id="probationAverageCard">
-          <textarea id="probationAverageLabel" class="scenario-summary-label" rows="2" aria-label="Название поля среднего дохода на испытательный срок">Средний совокупный доход на Испытательный срок</textarea>
-          <strong id="probationAverageIncome">0 ₽</strong>
-          <button class="icon-button remove-card-button" type="button" id="hideProbationAverage" aria-label="Убрать средний доход на испытательный срок">x</button>
-        </div>
-        <button class="plus-button" type="button" id="showProbationAverage" hidden>+ Средний доход на испытательный срок</button>
         <div class="table-wrap">
           <table id="incomeScenariosTable">
             <thead>
@@ -637,60 +631,105 @@
       </div>
     </section>
 
-    <section class="table-block income-dynamics-block">
+    <section class="table-block profitability-block">
       <div class="table-title-row">
-        <h2>📈 Динамика дохода из месяца в месяц</h2>
-        <button class="secondary-button" type="button" id="toggleIncomeDynamics">Скрыть</button>
+        <h2>📊 Пропорция переменной и фиксированной части ФОТ</h2>
+        <div class="title-actions">
+          <label class="profitability-revenue-field">
+            <span>Выручка за 1 продажу</span>
+            <span class="money-field table-money-field">
+              <input id="revenuePerSale" class="money-input" type="text" inputmode="numeric" value="100 000">
+              <span>₽</span>
+            </span>
+          </label>
+          <button class="secondary-button" type="button" id="toggleProfitabilityBlock">Скрыть</button>
+        </div>
       </div>
-      <div class="analytics-content" id="incomeDynamicsContent">
-        <div class="table-wrap">
-          <table id="incomeDynamicsTable">
+      <div class="analytics-content" id="profitabilityContent">
+        <div class="table-wrap profitability-table-wrap">
+          <table id="profitabilityTable">
             <thead>
               <tr>
-                <th>Название месяца</th>
-                <th>Количество сделок</th>
-                <th>Совокупный доход</th>
+                <th>Показатель</th>
+                <th>1 месяц</th>
+                <th>2 месяц</th>
+                <th>3 месяц</th>
+                <th>4 месяц</th>
+                <th>5 месяц</th>
+                <th>6 месяц</th>
+                <th>7 месяц</th>
+                <th>8 месяц</th>
+                <th>9 месяц</th>
+                <th>10 месяц</th>
+                <th>11 месяц</th>
+                <th>12 месяц</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td><input class="month-name" type="text" value="1 месяц"></td>
-                <td><input class="month-deals" type="number" min="0" step="1" value="0"></td>
-                <td class="month-income">0 ₽</td>
+              <tr data-profitability-row="month">
+                <td>Месяц работы</td>
+                <td>1</td>
+                <td>2</td>
+                <td>3</td>
+                <td>4</td>
+                <td>5</td>
+                <td>6</td>
+                <td>7</td>
+                <td>8</td>
+                <td>9</td>
+                <td>10</td>
+                <td>11</td>
+                <td>12</td>
               </tr>
-              <tr>
-                <td><input class="month-name" type="text" value="2 месяц"></td>
-                <td><input class="month-deals" type="number" min="0" step="1" value="0"></td>
-                <td class="month-income">0 ₽</td>
-              </tr>
-              <tr>
-                <td><input class="month-name" type="text" value="3 месяц"></td>
-                <td><input class="month-deals" type="number" min="0" step="1" value="0"></td>
-                <td class="month-income">0 ₽</td>
-              </tr>
-              <tr>
-                <td><input class="month-name" type="text" value="4 месяц"></td>
-                <td><input class="month-deals" type="number" min="0" step="1" value="0"></td>
-                <td class="month-income">0 ₽</td>
-              </tr>
+              <tr data-profitability-row="salary"><td>Оклад</td></tr>
+              <tr data-profitability-row="kpi"><td>KPI</td></tr>
+              <tr data-profitability-row="premium"><td>Премия</td></tr>
+              <tr data-profitability-row="fot"><td>ФОТ</td></tr>
+              <tr data-profitability-row="sales"><td>Продаж</td></tr>
+              <tr data-profitability-row="revenue"><td>Выручка на менеджера</td></tr>
+              <tr data-profitability-row="sale-cost"><td>Стоимость 1 продажи от ФОТ</td></tr>
+              <tr data-profitability-row="profitability"><td>Рентабельность менеджера</td></tr>
+              <tr data-profitability-row="difference"><td>Разница выручка - ФОТ</td></tr>
             </tbody>
           </table>
         </div>
+        <div class="payback-summary profitability-summary" id="profitabilitySummary">Кандидат пока не окупается</div>
         <div class="chart-card">
-          <canvas id="incomeDynamicsChart" height="120"></canvas>
+          <canvas id="profitabilityChart" height="180"></canvas>
         </div>
       </div>
     </section>
 
-    <section class="table-block payback-block" id="paybackBlock">
+    <section class="table-block sales-cost-block">
       <div class="table-title-row">
-        <h2>⚖️ Окупаемость кандидата</h2>
-        <button class="secondary-button" type="button" id="togglePaybackChart">Скрыть график</button>
+        <h2>Стоимость продаж и рентабельность относительно ФОТ</h2>
       </div>
-      <div class="analytics-content" id="paybackChartWrap">
-        <div class="payback-summary" id="paybackSummary">Кандидат пока не окупается</div>
-        <div class="chart-card">
-          <canvas id="paybackChart" height="120"></canvas>
+      <div class="analytics-content">
+        <div class="table-wrap sales-cost-table-wrap">
+          <table id="salesCostTable">
+            <tbody>
+              <tr data-sales-cost-row="month">
+                <td>Месяц работы</td>
+                <td>1</td>
+                <td>2</td>
+                <td>3</td>
+                <td>4</td>
+                <td>5</td>
+                <td>6</td>
+                <td>7</td>
+                <td>8</td>
+                <td>9</td>
+                <td>10</td>
+                <td>11</td>
+                <td>12</td>
+              </tr>
+              <tr data-sales-cost-row="sale-cost"><td>Стоимость 1 продажи от ФОТ</td></tr>
+              <tr data-sales-cost-row="profitability"><td>Рентабельность менеджера (выручка/фот)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-card sales-cost-chart-card">
+          <canvas id="salesCostChart" height="160"></canvas>
         </div>
       </div>
     </section>

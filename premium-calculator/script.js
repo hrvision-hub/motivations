@@ -11,11 +11,6 @@ const probationSalaryLabelInput = document.querySelector("#probationSalaryLabel"
 const probationSalaryCard = document.querySelector("#probationSalaryCard");
 const hideProbationSalaryButton = document.querySelector("#hideProbationSalary");
 const showProbationSalaryButton = document.querySelector("#showProbationSalary");
-const probationAverageCard = document.querySelector("#probationAverageCard");
-const probationAverageLabelInput = document.querySelector("#probationAverageLabel");
-const probationAverageIncome = document.querySelector("#probationAverageIncome");
-const hideProbationAverageButton = document.querySelector("#hideProbationAverage");
-const showProbationAverageButton = document.querySelector("#showProbationAverage");
 const kpiInput = document.querySelector("#kpiInput");
 const normalPremiumInput = document.querySelector("#normalPremiumInput");
 const strongPremiumInput = document.querySelector("#strongPremiumInput");
@@ -40,6 +35,11 @@ const incomeDynamicsContent = document.querySelector("#incomeDynamicsContent");
 const payrollTable = document.querySelector("#payrollTable");
 const payrollTableWrap = document.querySelector("#payrollTableWrap");
 const minimumGrossSalaryInput = document.querySelector("#minimumGrossSalary");
+const profitabilityTable = document.querySelector("#profitabilityTable");
+const profitabilityContent = document.querySelector("#profitabilityContent");
+const revenuePerSaleInput = document.querySelector("#revenuePerSale");
+const profitabilitySummary = document.querySelector("#profitabilitySummary");
+const salesCostTable = document.querySelector("#salesCostTable");
 const calculationTableWrap = calculationTable.closest(".table-wrap");
 const conversionStandardsWrap = conversionStandardsTable.closest(".table-wrap");
 const paybackBlock = document.querySelector("#paybackBlock");
@@ -53,6 +53,7 @@ const addConversionStandardRowButton = document.querySelector("#addConversionSta
 const toggleIncomeScenariosButton = document.querySelector("#toggleIncomeScenarios");
 const toggleCalculationTableButton = document.querySelector("#toggleCalculationTable");
 const togglePayrollTableButton = document.querySelector("#togglePayrollTable");
+const toggleProfitabilityBlockButton = document.querySelector("#toggleProfitabilityBlock");
 const toggleConversionStandardsButton = document.querySelector("#toggleConversionStandards");
 const toggleIncomeDynamicsButton = document.querySelector("#toggleIncomeDynamics");
 const togglePaybackChartButton = document.querySelector("#togglePaybackChart");
@@ -81,6 +82,8 @@ const STAGE_OPTIONS = [
 ];
 let incomeDynamicsChart;
 let paybackChart;
+let profitabilityChart;
+let salesCostChart;
 let xlsxLoadingPromise;
 let activeStandardScenario = "normal";
 let activeFunnelScenario = "normal";
@@ -117,6 +120,7 @@ const currencyLabelsPlugin = {
         const isBar = dataset.type === "bar";
         const isNegative = value < 0;
         const label = dataset.label || "";
+        const isProfitabilityChart = chart.canvas?.id === "profitabilityChart";
         const color = label === "Совокупный доход"
           ? "#134e4a"
           : label.includes("Выручка")
@@ -124,7 +128,13 @@ const currencyLabelsPlugin = {
           : label.includes("доход")
             ? "#1e3a8a"
             : (isNegative ? "#991b1b" : "#065f46");
-        const offset = label === "Совокупный доход"
+        const offset = isProfitabilityChart && label === "Выручка на менеджера"
+          ? -38
+          : isProfitabilityChart && label === "ФОТ"
+          ? 28
+          : isProfitabilityChart && label.includes("Разница")
+          ? (isNegative ? 34 : -16)
+          : label === "Совокупный доход"
           ? -14
           : label.includes("Выручка")
           ? -24
@@ -356,7 +366,6 @@ function updateIncomeScenarios() {
   const kpi = getKpiValue();
   const normalPremium = toNumber(normalPremiumInput.value);
 
-  probationAverageIncome.textContent = formatCurrency(probationSalary + kpi + normalPremium);
   normalIncome.textContent = formatCurrency(salary + kpi + normalPremium);
   strongIncome.textContent = formatCurrency(salary + kpi + toNumber(strongPremiumInput.value));
   topIncome.textContent = formatCurrency(salary + kpi + toNumber(topPremiumInput.value));
@@ -666,6 +675,331 @@ function getMonthAnalytics() {
 
     return { month, deals, premium, income, revenue, difference };
   });
+}
+
+function ensureProfitabilityInputs() {
+  const salesRow = profitabilityTable.querySelector('[data-profitability-row="sales"]');
+  const calculatedRows = Array.from(profitabilityTable.querySelectorAll("tbody tr"))
+    .filter((row) => !["month", "sales"].includes(row.dataset.profitabilityRow));
+
+  calculatedRows.forEach((row) => {
+    while (row.children.length < 13) {
+      const cell = document.createElement("td");
+      cell.textContent = "0";
+      row.append(cell);
+    }
+  });
+
+  while (salesRow.children.length < 13) {
+    const cell = document.createElement("td");
+    const month = salesRow.children.length;
+    cell.innerHTML = `<input class="profitability-sales-input" data-month="${month}" type="number" min="0" step="1" value="0">`;
+    salesRow.append(cell);
+  }
+}
+
+function setProfitabilityCell(rowName, monthIndex, value) {
+  const row = profitabilityTable.querySelector(`[data-profitability-row="${rowName}"]`);
+  const cell = row?.children[monthIndex + 1];
+
+  if (cell) {
+    cell.textContent = value;
+  }
+}
+
+function getProfitabilityItems() {
+  ensureProfitabilityInputs();
+
+  const salary = toNumber(salaryInput.value);
+  const kpi = getKpiValue();
+  const revenuePerSale = toNumber(revenuePerSaleInput.value);
+
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    const sales = Math.max(0, Math.floor(Number(profitabilityTable.querySelector(`.profitability-sales-input[data-month="${month}"]`)?.value) || 0));
+    const premium = getPremiumForDeals(sales);
+    const fot = salary + kpi + premium;
+    const revenue = sales * revenuePerSale;
+    const saleCost = sales > 0 ? fot / sales : 0;
+    const profitability = fot > 0 ? (revenue / fot) - 1 : 0;
+    const difference = revenue - fot;
+
+    return {
+      month,
+      salary,
+      kpi,
+      premium,
+      fot,
+      sales,
+      revenue,
+      saleCost,
+      profitability,
+      difference,
+    };
+  });
+}
+
+function updateProfitabilityTable(items) {
+  items.forEach((item, index) => {
+    setProfitabilityCell("salary", index, formatCurrency(item.salary));
+    setProfitabilityCell("kpi", index, formatCurrency(item.kpi));
+    setProfitabilityCell("premium", index, formatCurrency(item.premium));
+    setProfitabilityCell("fot", index, formatCurrency(item.fot));
+    setProfitabilityCell("revenue", index, formatCurrency(item.revenue));
+    setProfitabilityCell("sale-cost", index, item.sales > 0 ? formatCurrency(item.saleCost) : "0 ₽");
+    setProfitabilityCell("profitability", index, formatPercent(item.profitability * 100, 1));
+    setProfitabilityCell("difference", index, formatCurrency(item.difference));
+  });
+}
+
+function updateProfitabilitySummary(items) {
+  const firstProfitIndex = items.findIndex((item) => item.revenue >= item.fot);
+  const lastMeaningfulItem = [...items].reverse().find((item) => item.sales > 0 || item.premium > 0) || items[items.length - 1];
+  const status = getPaybackStatus(lastMeaningfulItem.revenue, lastMeaningfulItem.fot);
+  const profitText = firstProfitIndex >= 0
+    ? ` Предположительно кандидат начинает окупаться на ${firstProfitIndex + 1} месяц.`
+    : " По текущему сценарию кандидат пока не выходит в окупаемость.";
+
+  profitabilitySummary.classList.remove("is-loss", "is-even", "is-profit");
+
+  if (status === "loss") {
+    profitabilitySummary.textContent = `🔴 Кандидат пока не окупается.${profitText}`;
+    profitabilitySummary.classList.add("is-loss");
+    return;
+  }
+
+  if (status === "even") {
+    profitabilitySummary.textContent = `⚪ Кандидат вышел в точку окупаемости.${profitText}`;
+    profitabilitySummary.classList.add("is-even");
+    return;
+  }
+
+  profitabilitySummary.textContent = `🟢 Кандидат приносит прибыль.${profitText}`;
+  profitabilitySummary.classList.add("is-profit");
+}
+
+function updateProfitabilityChart(items) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const chartData = {
+    labels: items.map((item) => `${item.month} месяц`),
+    datasets: [
+      {
+        type: "bar",
+        label: "Разница выручка - ФОТ",
+        data: items.map((item) => item.difference),
+        backgroundColor: getPaybackColors(items.map((item) => ({ revenue: item.revenue, income: item.fot }))),
+        borderRadius: 8,
+        order: 2,
+      },
+      {
+        type: "line",
+        label: "ФОТ",
+        data: items.map((item) => item.fot),
+        borderColor: "#334155",
+        backgroundColor: "#334155",
+        tension: 0.35,
+        order: 1,
+      },
+      {
+        type: "line",
+        label: "Выручка на менеджера",
+        data: items.map((item) => item.revenue),
+        borderColor: "#16a34a",
+        backgroundColor: "#16a34a",
+        tension: 0.35,
+        order: 1,
+      },
+    ],
+  };
+
+  if (profitabilityChart) {
+    profitabilityChart.data = chartData;
+    profitabilityChart.update();
+    return;
+  }
+
+  profitabilityChart = new Chart(document.querySelector("#profitabilityChart"), {
+    data: chartData,
+    plugins: [currencyLabelsPlugin],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 64,
+          bottom: 26,
+        },
+      },
+      plugins: {
+        legend: { position: "bottom" },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${Number(context.raw).toLocaleString("ru-RU")} ₽`,
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grace: "24%",
+          ticks: {
+            callback: (value) => `${Number(value).toLocaleString("ru-RU")} ₽`,
+          },
+        },
+      },
+    },
+  });
+}
+
+function ensureSalesCostTableCells() {
+  salesCostTable.querySelectorAll("tbody tr").forEach((row) => {
+    while (row.children.length < 13) {
+      const cell = document.createElement("td");
+      cell.textContent = "0";
+      row.append(cell);
+    }
+  });
+}
+
+function setSalesCostCell(rowName, monthIndex, value) {
+  const row = salesCostTable.querySelector(`[data-sales-cost-row="${rowName}"]`);
+  const cell = row?.children[monthIndex + 1];
+
+  if (cell) {
+    cell.textContent = value;
+  }
+}
+
+function updateSalesCostTable(items) {
+  if (!salesCostTable) {
+    return;
+  }
+
+  ensureSalesCostTableCells();
+
+  items.forEach((item, index) => {
+    setSalesCostCell("sale-cost", index, item.sales > 0 ? formatCurrency(item.saleCost) : "0 ₽");
+    setSalesCostCell("profitability", index, formatPercent(item.profitability * 100, 1));
+  });
+}
+
+function updateSalesCostChart(items) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const profitabilityValues = items.map((item) => item.profitability * 100);
+  const minProfitability = Math.min(...profitabilityValues, -100);
+  const maxProfitability = Math.max(...profitabilityValues, 150);
+  const yProfitabilityMin = Math.floor(minProfitability / 25) * 25;
+  const yProfitabilityMax = Math.ceil(maxProfitability / 25) * 25;
+  const chartData = {
+    labels: items.map((item) => item.month),
+    datasets: [
+      {
+        type: "bar",
+        label: "Стоимость 1 продажи от ФОТ",
+        data: items.map((item) => item.sales > 0 ? item.saleCost : 0),
+        yAxisID: "yCost",
+        backgroundColor: "rgba(37, 99, 235, 0.72)",
+        borderColor: "#1d4ed8",
+        borderWidth: 1,
+        borderRadius: 8,
+        order: 2,
+      },
+      {
+        type: "line",
+        label: "Рентабельность менеджера (выручка / ФОТ)",
+        data: profitabilityValues,
+        yAxisID: "yProfitability",
+        borderColor: "#f97316",
+        backgroundColor: "#f97316",
+        pointBackgroundColor: "#f97316",
+        pointBorderColor: "#ffffff",
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        tension: 0.35,
+        order: 1,
+      },
+    ],
+  };
+
+  if (salesCostChart) {
+    salesCostChart.data = chartData;
+    salesCostChart.options.scales.yProfitability.min = yProfitabilityMin;
+    salesCostChart.options.scales.yProfitability.max = yProfitabilityMax;
+    salesCostChart.update();
+    return;
+  }
+
+  salesCostChart = new Chart(document.querySelector("#salesCostChart"), {
+    data: chartData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom" },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              if (context.dataset.yAxisID === "yProfitability") {
+                return `${context.dataset.label}: ${formatPercent(Number(context.raw), 1)}`;
+              }
+
+              return `${context.dataset.label}: ${formatCurrency(Number(context.raw))}`;
+            },
+          },
+        },
+      },
+      scales: {
+        yCost: {
+          type: "linear",
+          position: "left",
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: "Стоимость 1 продажи от ФОТ",
+          },
+          ticks: {
+            callback: (value) => `${Number(value).toLocaleString("ru-RU")} ₽`,
+          },
+        },
+        yProfitability: {
+          type: "linear",
+          position: "right",
+          min: yProfitabilityMin,
+          max: yProfitabilityMax,
+          grid: {
+            drawOnChartArea: false,
+          },
+          title: {
+            display: true,
+            text: "Рентабельность",
+          },
+          ticks: {
+            callback: (value) => `${Number(value).toLocaleString("ru-RU")}%`,
+          },
+        },
+      },
+    },
+  });
+}
+
+function updateProfitabilityBlock() {
+  if (!profitabilityTable) {
+    return;
+  }
+
+  const items = getProfitabilityItems();
+
+  updateProfitabilityTable(items);
+  updateProfitabilitySummary(items);
+  updateProfitabilityChart(items);
+  updateSalesCostTable(items);
+  updateSalesCostChart(items);
 }
 
 function createCalculationRow() {
@@ -1410,7 +1744,7 @@ function updateAllCalculations() {
   applyBonusRowClasses();
   updateCalculationTable();
   updateIncomePath();
-  updateAnalyticsBlocks();
+  updateProfitabilityBlock();
 }
 
 function addFunnelRow() {
@@ -1555,6 +1889,7 @@ function clampBonusPercent(input) {
 
 function collectCurrentData() {
   persistCurrentStandardScenario();
+  ensureProfitabilityInputs();
 
   return {
     simpleInputs: {
@@ -1566,24 +1901,22 @@ function collectCurrentData() {
       salaryInput: salaryInput.value,
       probationSalaryInput: probationSalaryInput.value,
       probationSalaryLabel: probationSalaryLabelInput.value,
-      probationAverageLabel: probationAverageLabelInput.value,
       kpiInput: kpiInput.value,
       normalPremiumInput: normalPremiumInput.value,
       strongPremiumInput: strongPremiumInput.value,
       topPremiumInput: topPremiumInput.value,
       targetIncomeInput: targetIncomeInput.value,
       minimumGrossSalary: minimumGrossSalaryInput.value,
+      revenuePerSale: revenuePerSaleInput.value,
     },
     kpiHidden: kpiCard.classList.contains("is-collapsed"),
     probationSalaryHidden: probationSalaryCard.classList.contains("is-collapsed"),
-    probationAverageHidden: probationAverageCard.hidden,
     incomeScenariosHidden: incomeContent.classList.contains("is-hidden"),
-    incomeDynamicsHidden: incomeDynamicsContent.classList.contains("is-hidden"),
     incomePathHidden: incomePathCard.classList.contains("is-hidden"),
     payrollHidden: payrollTableWrap.classList.contains("is-hidden"),
+    profitabilityHidden: profitabilityContent.classList.contains("is-hidden"),
     calculationHidden: calculationTableWrap.classList.contains("is-hidden"),
     conversionStandardsHidden: conversionStandardsWrap.classList.contains("is-hidden"),
-    paybackChartHidden: paybackBlock.classList.contains("is-collapsed"),
     activeStandardScenario,
     activeFunnelScenario,
     standardScenarioValues,
@@ -1622,10 +1955,13 @@ function collectCurrentData() {
         },
       };
     }),
-    incomeDynamicsRows: Array.from(incomeDynamicsTable.querySelectorAll("tbody tr")).map((row) => ({
-      month: row.querySelector(".month-name")?.value || "",
-      deals: row.querySelector(".month-deals")?.value || "0",
-    })),
+    profitabilityRows: Array.from({ length: 12 }, (_, index) => {
+      const month = index + 1;
+
+      return {
+        sales: profitabilityTable.querySelector(`.profitability-sales-input[data-month="${month}"]`)?.value || "0",
+      };
+    }),
     calculationRowCount: calculationTable.querySelectorAll("tbody tr:not(.plan-row)").length,
   };
 }
@@ -1742,17 +2078,8 @@ function applySavedData(data) {
     toggleProbationSalary(!data.probationSalaryHidden);
   }
 
-  if (typeof data.probationAverageHidden === "boolean") {
-    probationAverageCard.hidden = data.probationAverageHidden;
-    showProbationAverageButton.hidden = !data.probationAverageHidden;
-  }
-
   if (typeof data.incomeScenariosHidden === "boolean") {
     toggleTableVisibility(incomeContent, toggleIncomeScenariosButton, !data.incomeScenariosHidden);
-  }
-
-  if (typeof data.incomeDynamicsHidden === "boolean") {
-    toggleTableVisibility(incomeDynamicsContent, toggleIncomeDynamicsButton, !data.incomeDynamicsHidden);
   }
 
   if (typeof data.incomePathHidden === "boolean") {
@@ -1764,18 +2091,16 @@ function applySavedData(data) {
     toggleTableVisibility(payrollTableWrap, togglePayrollTableButton, !data.payrollHidden);
   }
 
+  if (typeof data.profitabilityHidden === "boolean") {
+    toggleTableVisibility(profitabilityContent, toggleProfitabilityBlockButton, !data.profitabilityHidden);
+  }
+
   if (typeof data.calculationHidden === "boolean") {
     toggleTableVisibility(calculationTableWrap, toggleCalculationTableButton, !data.calculationHidden);
   }
 
   if (typeof data.conversionStandardsHidden === "boolean") {
     toggleTableVisibility(conversionStandardsWrap, toggleConversionStandardsButton, !data.conversionStandardsHidden);
-  }
-
-  if (typeof data.paybackChartHidden === "boolean") {
-    paybackBlock.classList.toggle("is-collapsed", data.paybackChartHidden);
-    paybackChartWrap.classList.toggle("is-hidden", data.paybackChartHidden);
-    togglePaybackChartButton.textContent = data.paybackChartHidden ? "+" : "Скрыть график";
   }
 
   if (Array.isArray(data.funnelRows) && data.funnelRows.length) {
@@ -1843,20 +2168,16 @@ function applySavedData(data) {
   applyStandardScenarioValues();
   setScenarioButtons(funnelScenarioButtons, activeFunnelScenario);
 
-  if (Array.isArray(data.incomeDynamicsRows) && data.incomeDynamicsRows.length) {
-    incomeDynamicsTable.querySelector("tbody").innerHTML = "";
+  if (Array.isArray(data.profitabilityRows) && data.profitabilityRows.length) {
+    ensureProfitabilityInputs();
 
-    data.incomeDynamicsRows.forEach((item) => {
-      const row = document.createElement("tr");
+    data.profitabilityRows.forEach((item, index) => {
+      const month = index + 1;
+      const salesInput = profitabilityTable.querySelector(`.profitability-sales-input[data-month="${month}"]`);
 
-      row.innerHTML = `
-        <td><input class="month-name" type="text"></td>
-        <td><input class="month-deals" type="number" min="0" step="1"></td>
-        <td class="month-income">0 ₽</td>
-      `;
-      row.querySelector(".month-name").value = item.month;
-      row.querySelector(".month-deals").value = item.deals;
-      incomeDynamicsTable.querySelector("tbody").append(row);
+      if (salesInput) {
+        salesInput.value = item.sales || "0";
+      }
     });
   }
 }
@@ -1965,14 +2286,6 @@ async function exportToExcel() {
   updateAllCalculations();
 
   const workbook = XLSX.utils.book_new();
-  const monthlyRows = getMonthAnalytics().map((item) => [
-    item.month,
-    item.deals,
-    item.premium,
-    item.income,
-    item.revenue,
-    item.difference,
-  ]);
 
   addSheet(workbook, "Нормы", tableToRows("Нормы", document.querySelector("#normsTable")));
   addSheet(workbook, "Воронка", tableToRows("Воронка", document.querySelector("#funnelTable")));
@@ -1992,17 +2305,13 @@ async function exportToExcel() {
   addSheet(workbook, "Расчет ФОТ", tableToRows("Расчет ФОТ", document.querySelector("#payrollTable")));
   addSheet(workbook, "Расчет премии", tableToRows("Расчет премии", document.querySelector("#calculationTable")));
   addSheet(workbook, "Нормативы конверсий", tableToRows("Нормативы конверсий", document.querySelector("#conversionStandardsTable")));
-  addSheet(workbook, "Динамика дохода", [
-    ["Динамика дохода из месяца в месяц"],
-    ["Месяц", "Количество сделок", "Премия", "Совокупный доход", "Выручка", "Разница"],
-    ...monthlyRows,
+  addSheet(workbook, "Пропорция ФОТ", [
+    ["Пропорция переменной и фиксированной части ФОТ"],
+    ["Выручка за 1 продажу", toNumber(revenuePerSaleInput.value)],
+    [],
+    ...tableToRows("Расчет по месяцам", document.querySelector("#profitabilityTable")),
   ]);
-  addSheet(workbook, "Окупаемость", [
-    ["Окупаемость кандидата"],
-    ["Статус", paybackSummary.textContent],
-    ["Месяц", "Количество сделок", "Выручка", "Совокупный доход кандидата", "Разница"],
-    ...getMonthAnalytics().map((item) => [item.month, item.deals, item.revenue, item.income, item.difference]),
-  ]);
+  addSheet(workbook, "Стоимость продаж", tableToRows("Стоимость продаж и рентабельность относительно ФОТ", document.querySelector("#salesCostTable")));
 
   XLSX.writeFile(workbook, "raschet-premii.xlsx");
 }
@@ -2092,14 +2401,15 @@ toggleIncomePathButton.addEventListener("click", switchIncomePath);
 togglePayrollTableButton.addEventListener("click", () => {
   switchTableVisibility(payrollTableWrap, togglePayrollTableButton);
 });
+toggleProfitabilityBlockButton.addEventListener("click", () => {
+  switchTableVisibility(profitabilityContent, toggleProfitabilityBlockButton);
+});
 toggleCalculationTableButton.addEventListener("click", () => {
   switchTableVisibility(calculationTableWrap, toggleCalculationTableButton);
 });
 toggleConversionStandardsButton.addEventListener("click", () => {
   switchTableVisibility(conversionStandardsWrap, toggleConversionStandardsButton);
 });
-toggleIncomeDynamicsButton.addEventListener("click", switchIncomeDynamics);
-togglePaybackChartButton.addEventListener("click", switchPaybackChart);
 standardsScenarioButtons.forEach((button) => {
   button.addEventListener("click", () => setActiveStandardScenario(button.dataset.standardsScenario));
 });
@@ -2116,16 +2426,6 @@ showKpiButton.addEventListener("click", () => {
 });
 hideProbationSalaryButton.addEventListener("click", () => toggleProbationSalary(probationSalaryCard.classList.contains("is-collapsed")));
 showProbationSalaryButton.addEventListener("click", () => toggleProbationSalary(true));
-hideProbationAverageButton.addEventListener("click", () => {
-  probationAverageCard.hidden = true;
-  showProbationAverageButton.hidden = false;
-  updateAllCalculations();
-});
-showProbationAverageButton.addEventListener("click", () => {
-  probationAverageCard.hidden = false;
-  showProbationAverageButton.hidden = true;
-  updateAllCalculations();
-});
 exportExcelButton?.addEventListener("click", exportToExcel);
 saveDataButton.addEventListener("click", saveData);
 toggleSaveHistoryButton.addEventListener("click", toggleSaveHistory);
