@@ -54,7 +54,12 @@ const toggleIncomeDynamicsButton = document.querySelector("#toggleIncomeDynamics
 const togglePaybackChartButton = document.querySelector("#togglePaybackChart");
 const saveDataButton = document.querySelector("#saveData");
 const saveStatus = document.querySelector("#saveStatus");
+const toggleSaveHistoryButton = document.querySelector("#toggleSaveHistory");
+const saveHistoryPanel = document.querySelector("#saveHistoryPanel");
+const saveHistoryList = document.querySelector("#saveHistoryList");
 const STORAGE_KEY = "premiumCalculatorData";
+const HISTORY_KEY = "premiumCalculatorHistory";
+const MAX_HISTORY_ITEMS = 20;
 const STAGE_OPTIONS = [
   "Лид взят в работу",
   "Лид ответил",
@@ -1299,8 +1304,8 @@ function clampBonusPercent(input) {
   input.value = Math.max(0, toNumber(input.value));
 }
 
-function saveData() {
-  const data = {
+function collectCurrentData() {
+  return {
     simpleInputs: {
       salesPlan: salesPlanInput.value,
       workDays: workDaysInput.value,
@@ -1362,27 +1367,88 @@ function saveData() {
     })),
     calculationRowCount: calculationTable.querySelectorAll("tbody tr:not(.plan-row)").length,
   };
+}
+
+function getSaveHistory() {
+  const savedHistory = localStorage.getItem(HISTORY_KEY);
+
+  if (!savedHistory) {
+    return [];
+  }
+
+  try {
+    const history = JSON.parse(savedHistory);
+
+    return Array.isArray(history) ? history : [];
+  } catch {
+    localStorage.removeItem(HISTORY_KEY);
+    return [];
+  }
+}
+
+function saveHistory(history) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY_ITEMS)));
+}
+
+function formatHistoryDate(timestamp) {
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(timestamp));
+}
+
+function addHistoryEntry(data) {
+  const history = getSaveHistory();
+  const entry = {
+    id: `${Date.now()}`,
+    timestamp: Date.now(),
+    data,
+  };
+
+  history.unshift(entry);
+  saveHistory(history);
+  renderSaveHistory();
+}
+
+function renderSaveHistory() {
+  const history = getSaveHistory();
+
+  if (!saveHistoryList) {
+    return;
+  }
+
+  if (!history.length) {
+    saveHistoryList.innerHTML = '<div class="save-history-empty">Пока нет сохранений. Нажмите «Сохранить», чтобы создать первую версию.</div>';
+    return;
+  }
+
+  saveHistoryList.innerHTML = history.map((item, index) => `
+    <div class="save-history-item">
+      <div>
+        <div class="save-history-date">${formatHistoryDate(item.timestamp)}</div>
+        <div class="save-history-meta">Версия ${history.length - index}</div>
+      </div>
+      <button class="restore-history-button" type="button" data-history-id="${item.id}">Восстановить</button>
+    </div>
+  `).join("");
+}
+
+function saveData() {
+  const data = collectCurrentData();
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  addHistoryEntry(data);
   saveStatus.textContent = "Сохранено";
   window.setTimeout(() => {
     saveStatus.textContent = "";
   }, 2000);
 }
 
-function restoreData() {
-  const savedData = localStorage.getItem(STORAGE_KEY);
-
-  if (!savedData) {
-    return;
-  }
-
-  let data;
-
-  try {
-    data = JSON.parse(savedData);
-  } catch {
-    localStorage.removeItem(STORAGE_KEY);
+function applySavedData(data) {
+  if (!data) {
     return;
   }
 
@@ -1500,6 +1566,47 @@ function restoreData() {
       incomeDynamicsTable.querySelector("tbody").append(row);
     });
   }
+}
+
+function restoreData() {
+  const savedData = localStorage.getItem(STORAGE_KEY);
+
+  if (!savedData) {
+    return;
+  }
+
+  try {
+    applySavedData(JSON.parse(savedData));
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+function restoreHistoryEntry(id) {
+  const history = getSaveHistory();
+  const entry = history.find((item) => item.id === id);
+
+  if (!entry) {
+    return;
+  }
+
+  applySavedData(entry.data);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entry.data));
+  formatMoneyInputs();
+  applyBonusRowClasses();
+  updateAllCalculations();
+  saveStatus.textContent = "Восстановлено";
+  window.setTimeout(() => {
+    saveStatus.textContent = "";
+  }, 2000);
+}
+
+function toggleSaveHistory() {
+  const isHidden = saveHistoryPanel.classList.contains("is-hidden");
+
+  saveHistoryPanel.classList.toggle("is-hidden", !isHidden);
+  toggleSaveHistoryButton.textContent = isHidden ? "Скрыть историю" : "История сохранений";
+  renderSaveHistory();
 }
 
 function getCellValue(cell) {
@@ -1714,7 +1821,14 @@ showProbationAverageButton.addEventListener("click", () => {
 });
 exportExcelButton?.addEventListener("click", exportToExcel);
 saveDataButton.addEventListener("click", saveData);
+toggleSaveHistoryButton.addEventListener("click", toggleSaveHistory);
+saveHistoryList.addEventListener("click", (event) => {
+  if (event.target.classList.contains("restore-history-button")) {
+    restoreHistoryEntry(event.target.dataset.historyId);
+  }
+});
 restoreData();
+renderSaveHistory();
 formatMoneyInputs();
 applyBonusRowClasses();
 updateAllCalculations();

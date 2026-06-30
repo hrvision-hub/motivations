@@ -859,6 +859,86 @@ tr:last-child td {
   font-weight: 700;
 }
 
+.history-toggle-button {
+  border-radius: 999px;
+  background: linear-gradient(135deg, #77c8ec, #8ddfc2);
+}
+
+.save-history-panel {
+  display: grid;
+  gap: 12px;
+  width: min(760px, 100%);
+  margin-top: 8px;
+  padding: 18px;
+  border: 2px solid #a9ddff;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ffffff, #eef7ff);
+  box-shadow: 0 16px 36px rgba(23, 69, 86, 0.09);
+}
+
+.save-history-panel.is-hidden {
+  display: none;
+}
+
+.save-history-title {
+  color: #174556;
+  font-size: 20px;
+  font-weight: 850;
+}
+
+.save-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.save-history-empty {
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: var(--muted);
+  background: #f7fbff;
+  font-weight: 700;
+}
+
+.save-history-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid #c8e9dc;
+  border-radius: 16px;
+  background: #f8fff9;
+}
+
+.save-history-date {
+  color: #174556;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.save-history-meta {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.restore-history-button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  background: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.restore-history-button:hover {
+  background: var(--accent-dark);
+}
+
 .bonus-block table {
   table-layout: fixed;
 }

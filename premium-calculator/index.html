@@ -621,7 +621,12 @@
 
     <section class="save-section">
       <button class="save-button" type="button" id="saveData">Сохранить</button>
+      <button class="secondary-button history-toggle-button" type="button" id="toggleSaveHistory">История сохранений</button>
       <span class="save-status" id="saveStatus" aria-live="polite"></span>
+      <div class="save-history-panel is-hidden" id="saveHistoryPanel">
+        <div class="save-history-title">История сохранений</div>
+        <div class="save-history-list" id="saveHistoryList"></div>
+      </div>
     </section>
   </main>
 
